@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { uploadPhoto, getPhotos, deletePhoto } from '../api/photoApi';
+import { uploadMedia, getMedia, deleteMedia } from '../api/mediaApi';
 import { getFolders } from '../api/folderApi';
 
 /**
@@ -13,7 +13,7 @@ const PhotoGallery = () => {
   const [searchParams] = useSearchParams();
   const folderId = searchParams.get('folderId');
 
-  const [photos, setPhotos] = useState([]);
+  const [media, setMedia] = useState([]);
   const [folders, setFolders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -41,13 +41,13 @@ const PhotoGallery = () => {
   };
 
   /**
-   * Fetch photos (filtered by folder if folderId is present)
+   * Fetch media (filtered by folder if folderId is present)
    */
   const fetchPhotos = async () => {
     try {
       setLoading(true);
-      const response = await getPhotos(folderId);
-      setPhotos(response.data);
+      const response = await getMedia(folderId);
+      setMedia(response.data);
     } catch (error) {
       console.error('Error fetching photos:', error);
       toast.error(error.response?.data?.error || 'Failed to fetch photos');
@@ -62,15 +62,9 @@ const PhotoGallery = () => {
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        toast.error('Please select an image file');
-        return;
-      }
-
-      // Validate file size (5MB max)
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('File size must be less than 5MB');
+      // Validate file size (100MB max)
+      if (file.size > 100 * 1024 * 1024) {
+        toast.error('File size must be less than 100MB');
         return;
       }
 
@@ -98,8 +92,8 @@ const PhotoGallery = () => {
 
     try {
       setUploading(true);
-      await uploadPhoto(selectedFile, caption, selectedFolderId || null);
-      toast.success('Photo uploaded successfully!');
+      await uploadMedia(selectedFile, caption, selectedFolderId || null);
+      toast.success('Media uploaded successfully!');
 
       // Reset form
       setSelectedFile(null);
@@ -125,8 +119,8 @@ const PhotoGallery = () => {
     }
 
     try {
-      await deletePhoto(photoId);
-      toast.success('Photo deleted successfully!');
+      await deleteMedia(photoId);
+      toast.success('Media deleted successfully!');
       fetchPhotos();
     } catch (error) {
       console.error('Error deleting photo:', error);
@@ -294,14 +288,14 @@ const PhotoGallery = () => {
         {/* Photos Grid */}
         <div>
           <h2 className="text-2xl font-semibold text-gray-800 mb-6">
-            Your Photos ({photos.length})
+            Your Media ({media.length})
           </h2>
 
           {loading ? (
             <div className="flex justify-center items-center py-20">
               <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-pink-500"></div>
             </div>
-          ) : photos.length === 0 ? (
+          ) : media.length === 0 ? (
             <div className="text-center py-20 bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl border border-pink-100">
               <svg
                 className="mx-auto h-24 w-24 text-gray-300"
@@ -321,7 +315,7 @@ const PhotoGallery = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {photos.map((photo) => (
+              {media.map((photo) => (
                 <div
                   key={photo._id}
                   className="group relative bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl overflow-hidden hover:shadow-2xl transition-all transform hover:scale-[1.02] border border-pink-100"

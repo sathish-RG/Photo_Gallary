@@ -4,7 +4,7 @@ const cookieParser = require('cookie-parser');
 
 // Route files
 const auth = require('./routes/authRoutes');
-const photos = require('./routes/photoRoutes');
+const media = require('./routes/mediaRoutes');
 const folders = require('./routes/folderRoutes');
 
 const app = express();
@@ -26,7 +26,7 @@ app.use('/uploads', express.static('uploads'));
 
 // Mount routers
 app.use('/api/auth', auth);
-app.use('/api/photos', photos);
+app.use('/api/media', media);
 app.use('/api/folders', folders);
 
 module.exports = app;

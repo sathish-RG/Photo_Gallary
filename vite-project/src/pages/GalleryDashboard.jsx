@@ -1,38 +1,39 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { getFolders, createFolder, deleteFolder, verifyFolderPassword } from '../api/folderApi';
+import { createFolder, getFolders, verifyFolderPassword, deleteFolder } from '../api/folderApi';
 
 /**
  * GalleryDashboard Component
- * Enhanced UI with search, modals, and password protection
+ * Main dashboard for viewing and managing photo albums
  */
 const GalleryDashboard = () => {
+  const navigate = useNavigate();
   const [folders, setFolders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Create folder modal state
+  // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showAccessModal, setShowAccessModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  // Form states
   const [newFolderName, setNewFolderName] = useState('');
   const [newFolderPassword, setNewFolderPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [creating, setCreating] = useState(false);
-
-  // Access password modal state
-  const [showAccessModal, setShowAccessModal] = useState(false);
-  const [selectedFolder, setSelectedFolder] = useState(null);
   const [accessPassword, setAccessPassword] = useState('');
-  const [verifying, setVerifying] = useState(false);
-
-  // Delete password modal state
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [folderToDelete, setFolderToDelete] = useState(null);
   const [deletePassword, setDeletePassword] = useState('');
-  const [deleting, setDeleting] = useState(false);
 
-  const navigate = useNavigate();
+  // Selected folder states
+  const [selectedFolder, setSelectedFolder] = useState(null);
+  const [folderToDelete, setFolderToDelete] = useState(null);
+
+  // Loading states
+  const [creating, setCreating] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchFolders();
@@ -40,24 +41,19 @@ const GalleryDashboard = () => {
 
   const fetchFolders = async () => {
     try {
-      setLoading(true);
       const response = await getFolders();
       setFolders(response.data);
     } catch (error) {
       console.error('Error fetching folders:', error);
-      toast.error(error.response?.data?.error || 'Failed to fetch folders');
+      toast.error('Failed to load albums');
     } finally {
       setLoading(false);
     }
   };
 
-  // Filter folders based on search query
-  const filteredFolders = useMemo(() => {
-    if (!searchQuery.trim()) return folders;
-    return folders.filter(folder =>
-      folder.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [folders, searchQuery]);
+  const filteredFolders = folders.filter(folder =>
+    folder.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   /**
    * Handle create folder
@@ -66,26 +62,20 @@ const GalleryDashboard = () => {
     e.preventDefault();
 
     if (!newFolderName.trim()) {
-      toast.error('Please enter a folder name');
+      toast.error('Please enter an album name');
       return;
     }
 
-    // Validate password confirmation if password is provided
-    if (newFolderPassword.trim()) {
-      if (newFolderPassword !== confirmPassword) {
-        toast.error('Passwords do not match');
-        return;
-      }
+    if (newFolderPassword && newFolderPassword !== confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
     }
 
     try {
       setCreating(true);
-      await createFolder(newFolderName.trim(), newFolderPassword.trim() || null);
+      await createFolder(newFolderName, newFolderPassword);
       toast.success('Album created successfully!');
-      setShowCreateModal(false);
-      setNewFolderName('');
-      setNewFolderPassword('');
-      setConfirmPassword('');
+      closeCreateModal();
       fetchFolders();
     } catch (error) {
       console.error('Error creating folder:', error);
@@ -174,9 +164,7 @@ const GalleryDashboard = () => {
       setDeleting(true);
       await deleteFolder(folderId, password);
       toast.success('Album deleted successfully!');
-      setShowDeleteModal(false);
-      setFolderToDelete(null);
-      setDeletePassword('');
+      closeDeleteModal();
       fetchFolders();
     } catch (error) {
       console.error('Error deleting folder:', error);
@@ -284,16 +272,14 @@ const GalleryDashboard = () => {
               <h3 className="mt-4 text-xl font-medium text-gray-600">
                 {searchQuery ? 'No albums found' : 'No albums yet'}
               </h3>
-              <p className="mt-2 text-gray-500">
-                {searchQuery ? 'Try a different search term' : 'Create your first album to organize your photos!'}
-              </p>
+              <p className="mt-2 text-gray-500">Create your first album to get started!</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredFolders.map((folder) => (
                 <div
                   key={folder._id}
-                  className="group relative bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl overflow-hidden hover:shadow-2xl transition-all transform hover:scale-[1.02] border border-pink-100"
+                  className="group relative bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 border border-pink-100 overflow-hidden transform hover:-translate-y-1"
                 >
                   <div onClick={() => handleFolderClick(folder)} className="block p-6 cursor-pointer">
                     <div className="flex items-center space-x-4">
