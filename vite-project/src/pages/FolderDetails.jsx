@@ -5,6 +5,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-toastify';
 import { uploadMedia, getMedia, deleteMedia } from '../api/mediaApi';
 import { getFolders } from '../api/folderApi';
+import { uploadFileToCloudinary } from '../utils/cloudinaryStorage';
+import ConfirmationModal from '../components/ConfirmationModal';
+import ImagePreviewModal from '../components/ImagePreviewModal';
 
 /**
  * FolderDetails Component
@@ -101,6 +104,9 @@ const FolderDetails = () => {
   /**
    * Upload all previewed files
    */
+  /**
+   * Upload all previewed files
+   */
   const handleUploadAll = async () => {
     if (previewFiles.length === 0) {
       toast.error('No files to upload');
@@ -111,7 +117,20 @@ const FolderDetails = () => {
       setUploading(true);
 
       for (const previewFile of previewFiles) {
-        await uploadMedia(previewFile.file, '', folderId);
+        // 1. Upload to Cloudinary
+        const downloadURL = await uploadFileToCloudinary(previewFile.file);
+
+        // 2. Save metadata to backend
+        await uploadMedia({
+          mediaUrl: downloadURL,
+          fileType: previewFile.type,
+          mimeType: previewFile.file.type,
+          fileSize: previewFile.file.size,
+          fileName: previewFile.file.name,
+          caption: '', // You could add a caption input field later
+          folderId: folderId
+        });
+
         URL.revokeObjectURL(previewFile.preview);
       }
 
@@ -126,21 +145,60 @@ const FolderDetails = () => {
     }
   };
 
+  // Delete Modal State
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
+
   /**
-   * Handle media deletion
+   * Handle media deletion request
    */
-  const handleDelete = async (mediaId) => {
-    if (!window.confirm('Are you sure you want to delete this media?')) {
-      return;
+  const handleDeleteClick = (mediaId) => {
+    setItemToDelete(mediaId);
+    setDeleteModalOpen(true);
+  };
+
+  // Preview Modal State
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(-1);
+
+  // Filter only images for preview navigation
+  const images = media.filter(item => item.fileType === 'image');
+
+  const handleImageClick = (item) => {
+    if (item.fileType === 'image') {
+      const index = images.findIndex(img => img._id === item._id);
+      setSelectedImageIndex(index);
+      setPreviewModalOpen(true);
     }
+  };
+
+  const handleNextImage = () => {
+    if (selectedImageIndex < images.length - 1) {
+      setSelectedImageIndex(prev => prev + 1);
+    }
+  };
+
+  const handlePrevImage = () => {
+    if (selectedImageIndex > 0) {
+      setSelectedImageIndex(prev => prev - 1);
+    }
+  };
+
+  /**
+   * Confirm deletion
+   */
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete) return;
 
     try {
-      await deleteMedia(mediaId);
+      await deleteMedia(itemToDelete);
       toast.success('Media deleted successfully!');
       fetchMedia();
     } catch (error) {
       console.error('Error deleting media:', error);
       toast.error(error.response?.data?.error || 'Failed to delete media');
+    } finally {
+      setItemToDelete(null);
     }
   };
 
@@ -425,7 +483,8 @@ const FolderDetails = () => {
                     item={item}
                     viewMode={viewMode}
                     itemVariants={itemVariants}
-                    handleDelete={handleDelete}
+                    handleDelete={handleDeleteClick}
+                    onImageClick={handleImageClick}
                   />
                 ))}
               </AnimatePresence>
@@ -434,36 +493,29 @@ const FolderDetails = () => {
         </div>
       </div>
 
-      {/* Masonry CSS */}
-      <style jsx>{`
-        .masonry-container {
-          column-count: 1;
-          column-gap: 1.5rem;
-        }
 
-        @media (min-width: 640px) {
-          .masonry-container {
-            column-count: 2;
-          }
-        }
+      {/* Image Preview Modal */}
+      <ImagePreviewModal
+        isOpen={previewModalOpen}
+        onClose={() => setPreviewModalOpen(false)}
+        imageUrl={selectedImageIndex >= 0 ? images[selectedImageIndex]?.filePath : ''}
+        caption={selectedImageIndex >= 0 ? images[selectedImageIndex]?.caption : ''}
+        onNext={handleNextImage}
+        onPrev={handlePrevImage}
+        hasNext={selectedImageIndex < images.length - 1}
+        hasPrev={selectedImageIndex > 0}
+      />
 
-        @media (min-width: 1024px) {
-          .masonry-container {
-            column-count: 3;
-          }
-        }
-
-        @media (min-width: 1280px) {
-          .masonry-container {
-            column-count: 4;
-          }
-        }
-
-        .masonry-item {
-          break-inside: avoid;
-          page-break-inside: avoid;
-        }
-      `}</style>
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Media"
+        message="Are you sure you want to delete this media? This action cannot be undone."
+        confirmText="Delete"
+        isDangerous={true}
+      />
     </div>
   );
 };
@@ -472,7 +524,7 @@ const FolderDetails = () => {
  * MediaCard Component
  * Renders different UI based on media type (image, video, audio)
  */
-const MediaCard = ({ item, viewMode, itemVariants, handleDelete }) => {
+const MediaCard = ({ item, viewMode, itemVariants, handleDelete, onImageClick }) => {
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
 
   const handleMouseEnter = (e) => {
@@ -507,9 +559,12 @@ const MediaCard = ({ item, viewMode, itemVariants, handleDelete }) => {
     >
       {/* Image Rendering */}
       {item.fileType === 'image' && (
-        <div className={`overflow-hidden ${viewMode === 'grid' ? 'aspect-square' : ''}`}>
+        <div
+          className={`overflow-hidden cursor-pointer ${viewMode === 'grid' ? 'aspect-square' : ''}`}
+          onClick={() => onImageClick(item)}
+        >
           <motion.img
-            src={`http://localhost:5000${item.filePath}`}
+            src={item.filePath}
             alt={item.caption || 'Image'}
             className={`w-full ${viewMode === 'grid' ? 'h-full object-cover' : 'object-contain'} transition-transform duration-300 group-hover:scale-110`}
             whileHover={{ scale: 1.05 }}
@@ -535,7 +590,7 @@ const MediaCard = ({ item, viewMode, itemVariants, handleDelete }) => {
       {item.fileType === 'video' && (
         <div className="relative">
           <video
-            src={`http://localhost:5000${item.filePath}`}
+            src={item.filePath}
             className="w-full h-auto"
             muted
             loop
@@ -590,7 +645,7 @@ const MediaCard = ({ item, viewMode, itemVariants, handleDelete }) => {
           </p>
 
           <audio
-            src={`http://localhost:5000${item.filePath}`}
+            src={item.filePath}
             controls
             className="w-full"
             style={{

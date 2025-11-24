@@ -131,23 +131,14 @@ exports.deleteFolder = async (req, res) => {
       }
     }
 
-    // Delete all photos in this folder
-    const Photo = require('../models/Photo');
-    const fs = require('fs');
-    const path = require('path');
+    // Delete all media in this folder
+    const Media = require('../models/Media');
     
-    const photos = await Photo.find({ folder: req.params.id });
+    // Delete media from database
+    await Media.deleteMany({ folder: req.params.id });
     
-    // Delete photo files from filesystem
-    for (const photo of photos) {
-      const filePath = path.join(__dirname, '..', photo.imagePath);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
-    }
-    
-    // Delete photos from database
-    await Photo.deleteMany({ folder: req.params.id });
+    // Note: We are not deleting from Firebase Storage here.
+    // To do that, we would need to store the storage path or use Firebase Admin SDK.
     
     // Delete folder
     await Folder.findByIdAndDelete(req.params.id);

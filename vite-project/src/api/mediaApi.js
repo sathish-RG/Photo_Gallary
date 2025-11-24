@@ -20,18 +20,11 @@ const getAuthHeader = () => {
  * @param {string} caption - Optional caption for the media
  * @param {string} folderId - Optional folder ID to save media into
  */
-export const uploadMedia = async (mediaFile, caption = '', folderId = null) => {
-  const formData = new FormData();
-  formData.append('media', mediaFile);
-  formData.append('caption', caption);
-  if (folderId) {
-    formData.append('folderId', folderId);
-  }
-
-  const response = await axios.post(API_URL, formData, {
+export const uploadMedia = async (mediaData) => {
+  const response = await axios.post(API_URL, mediaData, {
     headers: {
       ...getAuthHeader().headers,
-      'Content-Type': 'multipart/form-data',
+      'Content-Type': 'application/json',
     },
   });
 

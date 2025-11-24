@@ -1,6 +1,14 @@
 const Media = require('../models/Media');
 const path = require('path');
 const fs = require('fs');
+const cloudinary = require('cloudinary').v2;
+
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
 /**
  * Helper function to determine file type from MIME type
@@ -19,41 +27,32 @@ const getFileType = (mimetype) => {
  */
 exports.uploadMedia = async (req, res) => {
   try {
-    // Check if file was uploaded
-    if (!req.file) {
+    const { 
+      mediaUrl, 
+      fileType, 
+      mimeType, 
+      fileSize, 
+      fileName,
+      caption, 
+      folderId 
+    } = req.body;
+
+    if (!mediaUrl || !fileType || !mimeType || !fileName) {
       return res.status(400).json({
         success: false,
-        error: 'Please upload a media file',
-      });
-    }
-
-    // Get caption and folderId from request body (optional)
-    const { caption, folderId } = req.body;
-
-    // Determine file type from MIME type
-    const fileType = getFileType(req.file.mimetype);
-    
-    if (!fileType) {
-      // Delete the uploaded file if type is not supported
-      const filePath = path.join(__dirname, '..', 'uploads', req.file.filename);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
-      return res.status(400).json({
-        success: false,
-        error: 'Unsupported file type',
+        error: 'Missing required media information',
       });
     }
 
     // Create media document in database
     const media = await Media.create({
-      user: req.user.id, // From auth middleware
-      filePath: `/uploads/${req.file.filename}`,
+      user: req.user.id,
+      filePath: mediaUrl, // Storing the Firebase URL directly
       fileType: fileType,
-      mimeType: req.file.mimetype,
-      fileSize: req.file.size,
+      mimeType: mimeType,
+      fileSize: fileSize,
       caption: caption || '',
-      folder: folderId || null, // Link to folder if provided
+      folder: folderId || null,
     });
 
     res.status(201).json({
@@ -64,7 +63,7 @@ exports.uploadMedia = async (req, res) => {
     console.error('Upload media error:', error);
     res.status(500).json({
       success: false,
-      error: 'Server error while uploading media',
+      error: 'Server error while saving media info',
     });
   }
 };
@@ -111,6 +110,7 @@ exports.getMedia = async (req, res) => {
  */
 exports.deleteMedia = async (req, res) => {
   try {
+    console.log('Delete request received for ID:', req.params.id);
     const media = await Media.findById(req.params.id);
 
     if (!media) {
@@ -128,10 +128,39 @@ exports.deleteMedia = async (req, res) => {
       });
     }
 
-    // Delete file from filesystem
-    const filePath = path.join(__dirname, '..', media.filePath);
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
+    // Delete from Cloudinary
+    if (media.filePath) {
+      try {
+        // Extract public_id from URL
+        // Example: https://res.cloudinary.com/cloudname/image/upload/v1234567890/folder/filename.jpg
+        const urlParts = media.filePath.split('/');
+        const uploadIndex = urlParts.indexOf('upload');
+        
+        if (uploadIndex !== -1 && urlParts.length > uploadIndex + 1) {
+          // Get parts after 'upload'
+          let publicIdParts = urlParts.slice(uploadIndex + 1);
+          
+          // Remove version if present (starts with v)
+          if (publicIdParts[0].startsWith('v')) {
+            publicIdParts.shift();
+          }
+          
+          // Join back to get path
+          let publicId = publicIdParts.join('/');
+          
+          // Remove extension
+          publicId = publicId.replace(/\.[^/.]+$/, "");
+          
+          console.log('Attempting to delete from Cloudinary, public_id:', publicId);
+          
+          await cloudinary.uploader.destroy(publicId, {
+            resource_type: media.fileType === 'video' ? 'video' : 'image'
+          });
+        }
+      } catch (cloudinaryError) {
+        console.error('Cloudinary deletion error:', cloudinaryError);
+        // Continue to delete from DB even if Cloudinary fails
+      }
     }
 
     // Delete media from database
