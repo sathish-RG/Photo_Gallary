@@ -8,6 +8,7 @@ import { getFolders } from '../api/folderApi';
 import { uploadFileToCloudinary } from '../utils/cloudinaryStorage';
 import ConfirmationModal from '../components/ConfirmationModal';
 import ImagePreviewModal from '../components/ImagePreviewModal';
+import GiftCardManager from '../components/GiftCardManager';
 
 /**
  * FolderDetails Component
@@ -253,6 +254,7 @@ const FolderDetails = () => {
     { id: 'photos', label: 'Photos', icon: '🖼️' },
     { id: 'videos', label: 'Videos', icon: '🎬' },
     { id: 'audio', label: 'Audio', icon: '🎵' },
+    { id: 'gifts', label: 'Saved Gifts', icon: '🎁' },
   ];
 
   return (
@@ -284,6 +286,19 @@ const FolderDetails = () => {
               {currentFolder.name}
             </h1>
             <p className="text-gray-600 text-lg">Upload and manage your media files</p>
+
+            {/* Create Gift Card Button */}
+            <Link
+              to={`/gallery/${folderId}/create-gift-card`}
+              className="inline-block mt-4 px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg transform hover:scale-105"
+            >
+              <span className="flex items-center gap-2">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                </svg>
+                🎁 Create Gift Card
+              </span>
+            </Link>
           </div>
 
           {/* View Toggle */}
@@ -438,11 +453,15 @@ const FolderDetails = () => {
 
         {/* Media Display */}
         <div>
-          <h2 className="text-2xl font-semibold text-gray-800 mb-6">
-            {tabs.find(t => t.id === activeTab)?.label} ({filteredMedia.length})
-          </h2>
+          {activeTab !== 'gifts' && (
+            <h2 className="text-2xl font-semibold text-gray-800 mb-6">
+              {tabs.find(t => t.id === activeTab)?.label} ({filteredMedia.length})
+            </h2>
+          )}
 
-          {loading ? (
+          {activeTab === 'gifts' ? (
+            <GiftCardManager />
+          ) : loading ? (
             <div className="flex justify-center items-center py-20">
               <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-pink-500"></div>
             </div>

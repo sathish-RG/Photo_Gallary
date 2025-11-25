@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -9,6 +9,14 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import GalleryDashboard from './pages/GalleryDashboard';
 import FolderDetails from './pages/FolderDetails';
+import GiftCardBuilder from './pages/GiftCardBuilder';
+import GiftCardViewer from './pages/GiftCardViewer';
+import AdminDashboard from './pages/AdminDashboard';
+import UserManagement from './pages/UserManagement';
+import UserFiles from './pages/UserFiles';
+import AdminRoute from './components/AdminRoute';
+import AdminLayout from './components/AdminLayout';
+import ReportedContent from './pages/ReportedContent';
 import './App.css';
 
 const PrivateRoute = ({ children }) => {
@@ -18,7 +26,12 @@ const PrivateRoute = ({ children }) => {
     return <div>Loading...</div>;
   }
 
-  return user ? children : <Navigate to="/login" />;
+  // If the logged‑in user is an admin, send them to the admin dashboard
+  if (user && user.isAdmin) {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
+
+  return user ? children : <Navigate to="/login" replace />;
 };
 
 const Dashboard = () => {
@@ -88,41 +101,112 @@ const Dashboard = () => {
   );
 };
 
+// Component to conditionally render Navbar
+const AppContent = () => {
+  const location = useLocation();
+  const hideNavbar = location.pathname.startsWith('/view/');
+
+  return (
+    <>
+      {!hideNavbar && <Navbar />}
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
+        <Route
+          path="/"
+          element={
+            <PrivateRoute>
+              <Dashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/gallery"
+          element={
+            <PrivateRoute>
+              <GalleryDashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/gallery/:folderId"
+          element={
+            <PrivateRoute>
+              <FolderDetails />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/gallery/:folderId/create-gift-card"
+          element={
+            <PrivateRoute>
+              <GiftCardBuilder />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/gallery/:folderId/gift-card/:giftCardId/edit"
+          element={
+            <PrivateRoute>
+              <GiftCardBuilder />
+            </PrivateRoute>
+          }
+        />
+        {/* Public route - no authentication */}
+        <Route path="/view/:slug" element={<GiftCardViewer />} />
+        {/* Admin routes */}
+        <Route
+          path="/admin/dashboard"
+          element={
+            <AdminRoute>
+              <AdminLayout>
+                <AdminDashboard />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/users"
+          element={
+            <AdminRoute>
+              <AdminLayout>
+                <UserManagement />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/users/:id/files"
+          element={
+            <AdminRoute>
+              <AdminLayout>
+                <UserFiles />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/reported"
+          element={
+            <AdminRoute>
+              <AdminLayout>
+                <ReportedContent />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+      </Routes>
+    </>
+  );
+};
+
 function App() {
   return (
     <Router>
       <AuthProvider>
-        <Navbar />
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password/:token" element={<ResetPassword />} />
-          <Route
-            path="/"
-            element={
-              <PrivateRoute>
-                <Dashboard />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/gallery"
-            element={
-              <PrivateRoute>
-                <GalleryDashboard />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/gallery/:folderId"
-            element={
-              <PrivateRoute>
-                <FolderDetails />
-              </PrivateRoute>
-            }
-          />
-        </Routes>
+        <AppContent />
         <ToastContainer position="top-right" autoClose={3000} />
       </AuthProvider>
     </Router>

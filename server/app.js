@@ -6,6 +6,8 @@ const cookieParser = require('cookie-parser');
 const auth = require('./routes/authRoutes');
 const media = require('./routes/mediaRoutes');
 const folders = require('./routes/folderRoutes');
+const giftCards = require('./routes/giftCardRoutes');
+const admin = require('./routes/adminRoutes');
 
 const app = express();
 
@@ -28,5 +30,7 @@ app.use('/uploads', express.static('uploads'));
 app.use('/api/auth', auth);
 app.use('/api/media', media);
 app.use('/api/folders', folders);
+app.use('/api/gift-cards', giftCards);
+app.use('/api/admin', admin);
 
 module.exports = app;
