@@ -1,10 +1,83 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+
+const Slideshow = ({ mediaItems }) => {
+  const [index, setIndex] = useState(0);
+
+  const nextSlide = () => {
+    setIndex((prev) => (prev + 1) % mediaItems.length);
+  };
+
+  const prevSlide = () => {
+    setIndex((prev) => (prev - 1 + mediaItems.length) % mediaItems.length);
+  };
+
+  if (mediaItems.length === 0) return null;
+
+  return (
+    <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden group">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={index}
+          initial={{ opacity: 0, x: 100 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -100 }}
+          transition={{ duration: 0.3 }}
+          className="absolute inset-0 flex items-center justify-center"
+        >
+          {mediaItems[index].type === 'image' ? (
+            <img
+              src={mediaItems[index].mediaData.filePath}
+              alt=""
+              className="w-full h-full object-contain"
+            />
+          ) : mediaItems[index].type === 'video' ? (
+            <video
+              src={mediaItems[index].mediaData.filePath}
+              controls
+              className="w-full h-full object-contain"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-gradient-to-r from-purple-500 to-pink-500 text-white">
+              <audio src={mediaItems[index].mediaData.filePath} controls />
+            </div>
+          )}
+        </motion.div>
+      </AnimatePresence>
+
+      {mediaItems.length > 1 && (
+        <>
+          <button
+            onClick={prevSlide}
+            className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            ←
+          </button>
+          <button
+            onClick={nextSlide}
+            className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            →
+          </button>
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+            {mediaItems.map((_, i) => (
+              <div
+                key={i}
+                className={`w-2 h-2 rounded-full ${i === index ? 'bg-white' : 'bg-white/50'}`}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
 
 /**
  * LivePreview Component
  * Right side preview showing responsive device frames with real-time gift card preview
  */
-const LivePreview = ({ title, message, themeColor, selectedMedia }) => {
+const LivePreview = ({ title, message, themeColor, contentBlocks = [] }) => {
   const [viewMode, setViewMode] = useState('mobile'); // 'mobile', 'tablet', 'desktop'
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -160,46 +233,56 @@ const LivePreview = ({ title, message, themeColor, selectedMedia }) => {
                   </p>
                 </div>
 
-                {/* Media Grid */}
-                {selectedMedia.length > 0 && (
-                  <div className={`px-4 pb-6 ${viewMode === 'desktop' ? 'max-w-4xl mx-auto' : ''}`}>
-                    <div className={`space-y-3 ${viewMode === 'desktop' ? 'grid grid-cols-2 gap-4 space-y-0' : ''
-                      }`}>
-                      {selectedMedia.map((item, index) => (
-                        <div key={item.mediaId} className="rounded-xl overflow-hidden shadow-lg bg-white">
-                          {item.type === 'image' && (
-                            <img
-                              src={item.mediaData.filePath}
-                              alt={`Media ${index + 1}`}
-                              className="w-full h-auto object-cover"
-                            />
+                {/* Content Blocks */}
+                <div className={`px-4 pb-6 space-y-8 ${viewMode === 'desktop' ? 'max-w-4xl mx-auto' : ''}`}>
+                  {contentBlocks.map((block) => (
+                    <div key={block.blockId}>
+                      {block.mediaItems.length > 0 && (
+                        <>
+                          {/* Slideshow Layout */}
+                          {block.blockLayoutType === 'slideshow' && (
+                            <Slideshow mediaItems={block.mediaItems} />
                           )}
-                          {item.type === 'video' && (
-                            <div className="relative w-full h-48 bg-gray-900 flex items-center justify-center">
-                              <video
-                                src={item.mediaData.filePath}
-                                className="w-full h-full object-cover"
-                                controls
-                              />
+
+                          {/* Grid Standard Layout */}
+                          {block.blockLayoutType === 'grid-standard' && (
+                            <div className="grid grid-cols-2 gap-2">
+                              {block.mediaItems.map((item) => (
+                                <div key={item.mediaId} className="aspect-square rounded-lg overflow-hidden shadow-sm bg-white">
+                                  {item.type === 'image' && (
+                                    <img src={item.mediaData.filePath} alt="" className="w-full h-full object-cover" />
+                                  )}
+                                  {item.type === 'video' && (
+                                    <video src={item.mediaData.filePath} className="w-full h-full object-cover" />
+                                  )}
+                                </div>
+                              ))}
                             </div>
                           )}
-                          {item.type === 'audio' && (
-                            <div className="p-4 bg-gradient-to-r from-purple-500 to-pink-500">
-                              <audio
-                                src={item.mediaData.filePath}
-                                controls
-                                className="w-full"
-                              />
+
+                          {/* Collage Layout (Masonry-ish) */}
+                          {block.blockLayoutType === 'grid-collage' && (
+                            <div className="columns-2 gap-2 space-y-2">
+                              {block.mediaItems.map((item) => (
+                                <div key={item.mediaId} className="break-inside-avoid rounded-lg overflow-hidden shadow-sm bg-white mb-2">
+                                  {item.type === 'image' && (
+                                    <img src={item.mediaData.filePath} alt="" className="w-full h-auto block" />
+                                  )}
+                                  {item.type === 'video' && (
+                                    <video src={item.mediaData.filePath} className="w-full h-auto block" />
+                                  )}
+                                </div>
+                              ))}
                             </div>
                           )}
-                        </div>
-                      ))}
+                        </>
+                      )}
                     </div>
-                  </div>
-                )}
+                  ))}
+                </div>
 
                 {/* Empty State */}
-                {selectedMedia.length === 0 && (
+                {contentBlocks.every(b => b.mediaItems.length === 0) && (
                   <div className="flex items-center justify-center h-64 px-6">
                     <div className="text-center text-white/80">
                       <svg className="w-16 h-16 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">

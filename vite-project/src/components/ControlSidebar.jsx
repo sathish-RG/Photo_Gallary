@@ -1,5 +1,10 @@
 import { useState } from 'react';
 
+const predefinedColors = [
+  '#ec4899', '#8b5cf6', '#3b82f6', '#10b981',
+  '#f59e0b', '#ef4444', '#6b7280', '#111827'
+];
+
 /**
  * ControlSidebar Component
  * Left sidebar with accordion sections for gift card customization
@@ -13,35 +18,33 @@ const ControlSidebar = ({
   setThemeColor,
   password,
   setPassword,
-  selectedMedia,
+  contentBlocks,
+  activeBlockId,
+  setActiveBlockId,
   availableMedia,
+  onAddBlock,
+  onRemoveBlock,
+  onUpdateBlockLayout,
+  onReorderBlocks,
   onToggleMedia,
-  onRemoveMedia,
-  onMoveMediaUp,
-  onMoveMediaDown,
+  onRemoveMediaFromBlock,
+  onMoveMediaInBlock,
   onSave,
   saving,
   isEditMode,
 }) => {
   const [showPassword, setShowPassword] = useState(false);
-  const [openSection, setOpenSection] = useState('basics'); // Track which accordion is open
+  const [openSection, setOpenSection] = useState('content'); // Default open content
+
+  const activeBlock = contentBlocks.find(b => b.blockId === activeBlockId);
+
+  const isMediaSelectedInActiveBlock = (mediaId) => {
+    return activeBlock?.mediaItems.some(item => item.mediaId === mediaId);
+  };
 
   const toggleSection = (section) => {
     setOpenSection(openSection === section ? '' : section);
   };
-
-  const predefinedColors = [
-    '#ec4899', // Pink
-    '#f43f5e', // Rose
-    '#8b5cf6', // Violet
-    '#3b82f6', // Blue
-    '#10b981', // Green
-    '#f59e0b', // Amber
-    '#ef4444', // Red
-    '#06b6d4', // Cyan
-  ];
-
-  const isMediaSelected = (mediaId) => selectedMedia.some(item => item.mediaId === mediaId);
 
   return (
     <div className="h-full overflow-y-auto bg-white border-r border-gray-200 p-6">
@@ -158,7 +161,7 @@ const ControlSidebar = ({
           )}
         </div>
 
-        {/* CONTENT Section */}
+        {/* LAYOUT & CONTENT Section */}
         <div className="border border-gray-200 rounded-xl overflow-hidden">
           <button
             onClick={() => toggleSection('content')}
@@ -167,10 +170,10 @@ const ControlSidebar = ({
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-gradient-to-br from-pink-400 to-rose-500 rounded-lg flex items-center justify-center">
                 <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
                 </svg>
               </div>
-              <span className="font-semibold text-gray-800">Content ({selectedMedia.length})</span>
+              <span className="font-semibold text-gray-800">Layout & Content</span>
             </div>
             <svg
               className={`w-5 h-5 text-gray-600 transition-transform ${openSection === 'content' ? 'rotate-180' : ''}`}
@@ -182,96 +185,161 @@ const ControlSidebar = ({
             </svg>
           </button>
           {openSection === 'content' && (
-            <div className="p-4 bg-white">
-              {/* Available Media */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Select Media</label>
-                <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto p-1">
-                  {availableMedia.map((media) => (
+            <div className="p-4 bg-white space-y-6">
+
+              {/* Block Management */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium text-gray-700">Blocks</label>
+                  <button
+                    onClick={onAddBlock}
+                    className="text-xs bg-pink-100 text-pink-600 px-2 py-1 rounded hover:bg-pink-200 transition-colors"
+                  >
+                    + Add Block
+                  </button>
+                </div>
+                <div className="flex gap-2 overflow-x-auto pb-2">
+                  {contentBlocks.map((block, index) => (
                     <div
-                      key={media._id}
-                      onClick={() => onToggleMedia(media)}
-                      className={`relative cursor-pointer rounded-lg overflow-hidden border-2 transition-all hover:scale-105 ${isMediaSelected(media._id) ? 'border-pink-500 shadow-md' : 'border-gray-200'
+                      key={block.blockId}
+                      onClick={() => setActiveBlockId(block.blockId)}
+                      className={`flex-shrink-0 cursor-pointer px-3 py-2 rounded-lg border-2 transition-all ${activeBlockId === block.blockId
+                        ? 'border-pink-500 bg-pink-50'
+                        : 'border-gray-200 hover:border-pink-300'
                         }`}
                     >
-                      {media.fileType === 'image' && (
-                        <img src={media.filePath} alt="" className="w-full h-20 object-cover" />
-                      )}
-                      {media.fileType === 'video' && (
-                        <div className="w-full h-20 bg-gray-900 flex items-center justify-center">
-                          <svg className="h-6 w-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M8 5v14l11-7z" />
-                          </svg>
-                        </div>
-                      )}
-                      {isMediaSelected(media._id) && (
-                        <div className="absolute top-1 right-1 bg-pink-500 text-white rounded-full p-0.5">
-                          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        </div>
-                      )}
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">Block {index + 1}</span>
+                        {contentBlocks.length > 1 && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onRemoveBlock(block.blockId);
+                            }}
+                            className="text-gray-400 hover:text-red-500"
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1 capitalize">
+                        {block.blockLayoutType.replace('grid-', '')}
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Selected Media List */}
-              {selectedMedia.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Selected Media (Reorder)</label>
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {selectedMedia.map((item, index) => (
-                      <div key={item.mediaId} className="flex items-center gap-2 bg-pink-50 p-2 rounded-lg">
-                        <div className="w-12 h-12 rounded overflow-hidden flex-shrink-0">
-                          {item.type === 'image' && (
-                            <img src={item.mediaData.filePath} alt="" className="w-full h-full object-cover" />
+              {activeBlock && (
+                <div className="border-t border-gray-100 pt-4">
+                  {/* Block Layout Selector */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Block Layout</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { id: 'grid-standard', label: 'Grid', icon: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z' },
+                        { id: 'grid-collage', label: 'Collage', icon: 'M4 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v3a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 16a1 1 0 011-1h4a1 1 0 011 1v3a1 1 0 01-1 1H5a1 1 0 01-1-1v-3zM14 12a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1h-4a1 1 0 01-1-1v-7z' },
+                        { id: 'slideshow', label: 'Slideshow', icon: 'M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z' }
+                      ].map((layout) => (
+                        <button
+                          key={layout.id}
+                          onClick={() => onUpdateBlockLayout(activeBlockId, layout.id)}
+                          className={`flex flex-col items-center justify-center p-2 rounded-lg border transition-all ${activeBlock.blockLayoutType === layout.id
+                            ? 'border-pink-500 bg-pink-50 text-pink-600'
+                            : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                            }`}
+                        >
+                          <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={layout.icon} />
+                          </svg>
+                          <span className="text-xs">{layout.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Available Media */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Add Media to Block</label>
+                    <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto p-1">
+                      {availableMedia.map((media) => (
+                        <div
+                          key={media._id}
+                          onClick={() => onToggleMedia(media)}
+                          className={`relative cursor-pointer rounded-lg overflow-hidden border-2 transition-all hover:scale-105 ${isMediaSelectedInActiveBlock(media._id) ? 'border-pink-500 shadow-md' : 'border-gray-200'
+                            }`}
+                        >
+                          {media.fileType === 'image' && (
+                            <img src={media.filePath} alt="" className="w-full h-20 object-cover" />
                           )}
-                          {item.type === 'video' && (
-                            <div className="w-full h-full bg-gray-900 flex items-center justify-center">
-                              <svg className="h-4 w-4 text-white" fill="currentColor" viewBox="0 0 24 24">
+                          {media.fileType === 'video' && (
+                            <div className="w-full h-20 bg-gray-900 flex items-center justify-center">
+                              <svg className="h-6 w-6 text-white" fill="currentColor" viewBox="0 0 24 24">
                                 <path d="M8 5v14l11-7z" />
                               </svg>
                             </div>
                           )}
+                          {isMediaSelectedInActiveBlock(media._id) && (
+                            <div className="absolute top-1 right-1 bg-pink-500 text-white rounded-full p-0.5">
+                              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                          )}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs text-gray-600 truncate">Item {index + 1}</p>
-                        </div>
-                        <div className="flex gap-1">
-                          <button
-                            onClick={() => onMoveMediaUp(index)}
-                            disabled={index === 0}
-                            className="p-1 bg-white rounded hover:bg-pink-100 disabled:opacity-30 disabled:cursor-not-allowed"
-                            title="Move up"
-                          >
-                            <svg className="w-4 h-4 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => onMoveMediaDown(index)}
-                            disabled={index === selectedMedia.length - 1}
-                            className="p-1 bg-white rounded hover:bg-pink-100 disabled:opacity-30 disabled:cursor-not-allowed"
-                            title="Move down"
-                          >
-                            <svg className="w-4 h-4 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => onRemoveMedia(item.mediaId)}
-                            className="p-1 bg-white rounded hover:bg-red-100"
-                            title="Remove"
-                          >
-                            <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
+
+                  {/* Selected Media List (Reorder) */}
+                  {activeBlock.mediaItems.length > 0 && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Block Media (Reorder)</label>
+                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                        {activeBlock.mediaItems.map((item, index) => (
+                          <div key={item.mediaId} className="flex items-center gap-2 bg-pink-50 p-2 rounded-lg">
+                            <div className="w-10 h-10 rounded overflow-hidden flex-shrink-0">
+                              {item.type === 'image' && (
+                                <img src={item.mediaData.filePath} alt="" className="w-full h-full object-cover" />
+                              )}
+                              {item.type === 'video' && (
+                                <div className="w-full h-full bg-gray-900 flex items-center justify-center">
+                                  <svg className="h-4 w-4 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M8 5v14l11-7z" />
+                                  </svg>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-gray-600 truncate">Item {index + 1}</p>
+                            </div>
+                            <div className="flex gap-1">
+                              <button
+                                onClick={() => onMoveMediaInBlock(activeBlockId, index, index - 1)}
+                                disabled={index === 0}
+                                className="p-1 bg-white rounded hover:bg-pink-100 disabled:opacity-30"
+                              >
+                                ↑
+                              </button>
+                              <button
+                                onClick={() => onMoveMediaInBlock(activeBlockId, index, index + 1)}
+                                disabled={index === activeBlock.mediaItems.length - 1}
+                                className="p-1 bg-white rounded hover:bg-pink-100 disabled:opacity-30"
+                              >
+                                ↓
+                              </button>
+                              <button
+                                onClick={() => onRemoveMediaFromBlock(activeBlockId, item.mediaId)}
+                                className="p-1 bg-white rounded hover:bg-red-100 text-red-500"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -339,7 +407,7 @@ const ControlSidebar = ({
       <div className="mt-6 pt-6 border-t border-gray-200">
         <button
           onClick={onSave}
-          disabled={saving || !title.trim() || !message.trim() || selectedMedia.length === 0}
+          disabled={saving || !title.trim() || !message.trim() || contentBlocks.every(b => b.mediaItems.length === 0)}
           className="w-full px-6 py-3 bg-gradient-to-r from-pink-500 to-rose-500 text-white font-semibold rounded-xl hover:from-pink-600 hover:to-rose-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg transform hover:scale-105"
         >
           {saving ? (isEditMode ? 'Updating...' : 'Creating...') : (isEditMode ? 'Update Gift Card' : 'Save & Generate Link')}

@@ -36,13 +36,26 @@ exports.createGiftCard = async (req, res) => {
     }
 
     // Verify all media items exist and belong to the user
-    const mediaIds = mediaContent.map(item => item.mediaId);
+    // Extract all media IDs from all blocks
+    const allMediaIds = mediaContent.flatMap(block => 
+      block.mediaItems.map(item => item.mediaId)
+    );
+    
+    // Deduplicate IDs for verification
+    const uniqueMediaIds = [...new Set(allMediaIds)];
+
     const mediaItems = await Media.find({
-      _id: { $in: mediaIds },
+      _id: { $in: uniqueMediaIds },
       user: req.user._id,
     });
 
-    if (mediaItems.length !== mediaIds.length) {
+    if (mediaItems.length !== uniqueMediaIds.length) {
+      console.error('Media verification failed:', {
+        found: mediaItems.length,
+        expected: uniqueMediaIds.length,
+        foundIds: mediaItems.map(m => m._id.toString()),
+        requestedIds: uniqueMediaIds
+      });
       return res.status(404).json({
         success: false,
         error: 'One or more media items not found or do not belong to you',
@@ -60,11 +73,14 @@ exports.createGiftCard = async (req, res) => {
       message,
       themeColor: themeColor || '#ec4899',
       uniqueSlug,
-      mediaContent: mediaContent.map((item, index) => ({
-        mediaId: item.mediaId,
-        type: item.type,
-        layoutType: item.layoutType || 'full-width',
-        order: item.order !== undefined ? item.order : index,
+      mediaContent: mediaContent.map((block, index) => ({
+        blockId: block.blockId,
+        blockLayoutType: block.blockLayoutType,
+        order: block.order !== undefined ? block.order : index,
+        mediaItems: block.mediaItems.map(item => ({
+          mediaId: item.mediaId,
+          type: item.type
+        }))
       })),
     };
 
@@ -138,7 +154,13 @@ exports.getGiftCardBySlug = async (req, res) => {
     }
 
     // If not protected, populate media and return full data
-    await giftCard.populate('mediaContent.mediaId');
+    if (giftCard.mediaContent && giftCard.mediaContent.length > 0) {
+      try {
+        await giftCard.populate('mediaContent.mediaItems.mediaId');
+      } catch (err) {
+        console.error('Error populating media:', err);
+      }
+    }
 
     res.status(200).json({
       success: true,
@@ -183,7 +205,7 @@ exports.unlockGiftCard = async (req, res) => {
     if (!giftCard.isProtected) {
       // If not protected, just return the data (populate media first)
       await giftCard.populate('sender', 'username');
-      await giftCard.populate('mediaContent.mediaId');
+      await giftCard.populate('mediaContent.mediaItems.mediaId');
       
       return res.status(200).json({
         success: true,
@@ -203,7 +225,14 @@ exports.unlockGiftCard = async (req, res) => {
 
     // Password correct, return full data
     await giftCard.populate('sender', 'username');
-    await giftCard.populate('mediaContent.mediaId');
+    
+    if (giftCard.mediaContent && giftCard.mediaContent.length > 0) {
+      try {
+        await giftCard.populate('mediaContent.mediaItems.mediaId');
+      } catch (err) {
+        console.error('Error populating media:', err);
+      }
+    }
 
     // Remove password from response
     giftCard.password = undefined;
@@ -236,7 +265,7 @@ exports.getAlbumGiftCards = async (req, res) => {
       albumId,
       sender: req.user._id,
     })
-      .populate('mediaContent.mediaId', 'filePath fileType')
+      .populate('mediaContent.mediaItems.mediaId', 'filePath fileType')
       .sort({ createdAt: -1 }); // Newest first
 
     res.status(200).json({
@@ -263,7 +292,7 @@ exports.updateGiftCard = async (req, res) => {
     const { id } = req.params;
     const { title, message, themeColor, mediaContent, password } = req.body;
 
-    // Find gift card and verify ownership
+    // Find gift card
     const giftCard = await GiftCard.findById(id);
 
     if (!giftCard) {
@@ -283,24 +312,39 @@ exports.updateGiftCard = async (req, res) => {
 
     // If media content is being updated, verify all media items
     if (mediaContent && Array.isArray(mediaContent)) {
-      const mediaIds = mediaContent.map(item => item.mediaId);
+      const allMediaIds = mediaContent.flatMap(block => 
+        block.mediaItems.map(item => item.mediaId)
+      );
+      
+      // Deduplicate IDs for verification
+      const uniqueMediaIds = [...new Set(allMediaIds)];
+
       const mediaItems = await Media.find({
-        _id: { $in: mediaIds },
+        _id: { $in: uniqueMediaIds },
         user: req.user._id,
       });
 
-      if (mediaItems.length !== mediaIds.length) {
+      if (mediaItems.length !== uniqueMediaIds.length) {
+        console.error('Media verification failed:', {
+          found: mediaItems.length,
+          expected: uniqueMediaIds.length,
+          foundIds: mediaItems.map(m => m._id.toString()),
+          requestedIds: uniqueMediaIds
+        });
         return res.status(404).json({
           success: false,
           error: 'One or more media items not found or do not belong to you',
         });
       }
 
-      giftCard.mediaContent = mediaContent.map((item, index) => ({
-        mediaId: item.mediaId,
-        type: item.type,
-        layoutType: item.layoutType || 'full-width',
-        order: item.order !== undefined ? item.order : index,
+      giftCard.mediaContent = mediaContent.map((block, index) => ({
+        blockId: block.blockId,
+        blockLayoutType: block.blockLayoutType,
+        order: block.order !== undefined ? block.order : index,
+        mediaItems: block.mediaItems.map(item => ({
+          mediaId: item.mediaId,
+          type: item.type
+        }))
       }));
     }
 
@@ -326,7 +370,7 @@ exports.updateGiftCard = async (req, res) => {
     await giftCard.save();
 
     // Populate media details for response
-    await giftCard.populate('mediaContent.mediaId');
+    await giftCard.populate('mediaContent.mediaItems.mediaId');
 
     res.status(200).json({
       success: true,

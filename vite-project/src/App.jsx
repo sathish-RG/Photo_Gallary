@@ -10,6 +10,7 @@ import ResetPassword from './pages/ResetPassword';
 import GalleryDashboard from './pages/GalleryDashboard';
 import FolderDetails from './pages/FolderDetails';
 import GiftCardBuilder from './pages/GiftCardBuilder';
+import TemplateSelectionPage from './pages/TemplateSelectionPage';
 import GiftCardViewer from './pages/GiftCardViewer';
 import AdminDashboard from './pages/AdminDashboard';
 import UserManagement from './pages/UserManagement';
@@ -135,6 +136,14 @@ const AppContent = () => {
           element={
             <PrivateRoute>
               <FolderDetails />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/gallery/:folderId/select-template"
+          element={
+            <PrivateRoute>
+              <TemplateSelectionPage />
             </PrivateRoute>
           }
         />

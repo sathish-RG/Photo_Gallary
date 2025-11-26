@@ -186,9 +186,6 @@ const GiftCardViewer = () => {
     );
   }
 
-  // Sort media by order
-  const sortedMedia = [...giftCard.mediaContent].sort((a, b) => a.order - b.order);
-
   return (
     <div
       className="min-h-screen relative overflow-hidden"
@@ -252,28 +249,49 @@ const GiftCardViewer = () => {
           </motion.div>
         </motion.div>
 
-        {/* Media Grid */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.9, duration: 0.6 }}
-          className="space-y-6"
-        >
-          <h2 className="text-3xl font-bold text-center mb-8" style={{ color: themeColor }}>
-            Your Special Memories 🎁
-          </h2>
+        {/* Media Content Blocks */}
+        <div className="space-y-12">
+          {giftCard.mediaContent && giftCard.mediaContent.sort((a, b) => a.order - b.order).map((block) => (
+            <div key={block.blockId} className="w-full">
+              {block.mediaItems && block.mediaItems.length > 0 && (
+                <>
+                  {/* Slideshow Layout */}
+                  {block.blockLayoutType === 'slideshow' && (
+                    <Slideshow mediaItems={block.mediaItems} />
+                  )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {sortedMedia.map((item, index) => (
-              <MediaItem
-                key={item._id}
-                item={item}
-                index={index}
-                themeColor={themeColor}
-              />
-            ))}
-          </div>
-        </motion.div>
+                  {/* Grid Standard Layout */}
+                  {block.blockLayoutType === 'grid-standard' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {block.mediaItems.map((item) => (
+                        <MediaGridItem
+                          key={item.mediaId._id}
+                          item={item}
+                          themeColor={themeColor}
+                          layoutType="standard"
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Collage Layout */}
+                  {block.blockLayoutType === 'grid-collage' && (
+                    <div className="columns-1 md:columns-2 gap-6 space-y-6">
+                      {block.mediaItems.map((item) => (
+                        <MediaGridItem
+                          key={item.mediaId._id}
+                          item={item}
+                          themeColor={themeColor}
+                          layoutType="collage"
+                        />
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          ))}
+        </div>
 
         {/* Footer */}
         <motion.div
@@ -300,40 +318,110 @@ const GiftCardViewer = () => {
   );
 };
 
-/**
- * MediaItem Component
- * Renders individual media with layout type
- */
-const MediaItem = ({ item, index, themeColor }) => {
-  const media = item.mediaId;
+const Slideshow = ({ mediaItems }) => {
+  const [index, setIndex] = useState(0);
 
-  if (!media) {
-    return null;
-  }
-
-  const getColumnSpan = () => {
-    switch (item.layoutType) {
-      case 'full-width':
-        return 'md:col-span-2';
-      case 'half-width':
-        return 'md:col-span-1';
-      case 'carousel-item':
-        return 'md:col-span-1';
-      default:
-        return 'md:col-span-2';
-    }
+  const nextSlide = () => {
+    setIndex((prev) => (prev + 1) % mediaItems.length);
   };
+
+  const prevSlide = () => {
+    setIndex((prev) => (prev - 1 + mediaItems.length) % mediaItems.length);
+  };
+
+  if (!mediaItems || mediaItems.length === 0) return null;
+
+  const currentItem = mediaItems[index];
+  const media = currentItem?.mediaId;
+
+  if (!media) return null;
+
+  return (
+    <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden group shadow-2xl">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={index}
+          initial={{ opacity: 0, x: 100 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -100 }}
+          transition={{ duration: 0.5 }}
+          className="absolute inset-0 flex items-center justify-center"
+        >
+          {currentItem.type === 'image' ? (
+            <img
+              src={media.filePath}
+              alt={media.caption || ''}
+              className="w-full h-full object-contain"
+            />
+          ) : currentItem.type === 'video' ? (
+            <video
+              src={media.filePath}
+              controls
+              className="w-full h-full object-contain"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-gradient-to-r from-purple-500 to-pink-500 text-white">
+              <audio src={media.filePath} controls />
+            </div>
+          )}
+
+          {/* Caption Overlay */}
+          {media.caption && (
+            <div className="absolute bottom-0 left-0 right-0 bg-black/60 p-4 text-white text-center backdrop-blur-sm">
+              <p className="text-lg font-medium">{media.caption}</p>
+            </div>
+          )}
+        </motion.div>
+      </AnimatePresence>
+
+      {mediaItems.length > 1 && (
+        <>
+          <button
+            onClick={prevSlide}
+            className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 backdrop-blur-md text-white p-3 rounded-full transition-all transform hover:scale-110"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <button
+            onClick={nextSlide}
+            className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 backdrop-blur-md text-white p-3 rounded-full transition-all transform hover:scale-110"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+            {mediaItems.map((_, i) => (
+              <div
+                key={i}
+                className={`w-2 h-2 rounded-full transition-all ${i === index ? 'bg-white w-4' : 'bg-white/50'}`}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+const MediaGridItem = ({ item, themeColor, layoutType }) => {
+  const media = item?.mediaId;
+  if (!media) return null;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 1.2 + index * 0.1, duration: 0.5 }}
-      className={`${getColumnSpan()} bg-white/90 backdrop-blur-lg rounded-2xl shadow-xl overflow-hidden border-4 hover:shadow-2xl transition-all transform hover:scale-[1.02]`}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.5 }}
+      className={`bg-white/90 backdrop-blur-lg rounded-2xl shadow-xl overflow-hidden border-4 hover:shadow-2xl transition-all transform hover:scale-[1.02] ${layoutType === 'collage' ? 'mb-4 break-inside-avoid' : 'h-full'
+        }`}
       style={{ borderColor: `${themeColor}40` }}
     >
       {/* Image */}
-      {media.fileType === 'image' && (
+      {item.type === 'image' && (
         <img
           src={media.filePath}
           alt={media.caption || 'Memory'}
@@ -342,7 +430,7 @@ const MediaItem = ({ item, index, themeColor }) => {
       )}
 
       {/* Video */}
-      {media.fileType === 'video' && (
+      {item.type === 'video' && (
         <video
           src={media.filePath}
           controls
@@ -351,7 +439,7 @@ const MediaItem = ({ item, index, themeColor }) => {
       )}
 
       {/* Audio */}
-      {media.fileType === 'audio' && (
+      {item.type === 'audio' && (
         <div className="p-6">
           <div
             className="rounded-2xl p-8 mb-4 flex items-center justify-center"
@@ -381,7 +469,7 @@ const MediaItem = ({ item, index, themeColor }) => {
       )}
 
       {/* Caption for images and videos */}
-      {media.caption && (media.fileType === 'image' || media.fileType === 'video') && (
+      {media.caption && (item.type === 'image' || item.type === 'video') && (
         <div className="p-4 bg-white">
           <p className="text-gray-700 font-medium">{media.caption}</p>
         </div>

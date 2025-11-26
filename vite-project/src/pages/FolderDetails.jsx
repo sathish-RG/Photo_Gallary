@@ -289,7 +289,7 @@ const FolderDetails = () => {
 
             {/* Create Gift Card Button */}
             <Link
-              to={`/gallery/${folderId}/create-gift-card`}
+              to={`/gallery/${folderId}/select-template`}
               className="inline-block mt-4 px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg transform hover:scale-105"
             >
               <span className="flex items-center gap-2">

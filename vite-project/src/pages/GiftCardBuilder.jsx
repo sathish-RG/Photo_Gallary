@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { QRCodeSVG } from 'qrcode.react';
 import { getMedia } from '../api/mediaApi';
 import { createGiftCard, getAlbumGiftCards, updateGiftCard } from '../api/giftCardApi';
+import { getTemplateById } from '../api/templateApi';
 import ControlSidebar from '../components/ControlSidebar';
 import LivePreview from '../components/LivePreview';
 
@@ -14,6 +15,9 @@ import LivePreview from '../components/LivePreview';
 const GiftCardBuilder = () => {
   const { folderId, giftCardId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const templateId = searchParams.get('templateId');
   const isEditMode = !!giftCardId;
 
   // Media from the album
@@ -21,7 +25,16 @@ const GiftCardBuilder = () => {
   const [loading, setLoading] = useState(true);
 
   // Selected media items
-  const [selectedMedia, setSelectedMedia] = useState([]);
+  // Content Blocks state
+  const [contentBlocks, setContentBlocks] = useState([
+    {
+      blockId: `block-${Date.now()}`,
+      blockLayoutType: 'grid-standard',
+      order: 0,
+      mediaItems: []
+    }
+  ]);
+  const [activeBlockId, setActiveBlockId] = useState(contentBlocks[0].blockId);
 
   // Customization fields
   const [title, setTitle] = useState('');
@@ -54,22 +67,61 @@ const GiftCardBuilder = () => {
             setThemeColor(card.themeColor);
             setGiftCardUrl(`${window.location.origin}/view/${card.uniqueSlug}`);
 
-            // Map existing media content to selectedMedia format
-            const existingMedia = card.mediaContent.map(item => {
-              const mediaData = item.mediaId;
-              return {
-                mediaId: mediaData._id,
-                type: item.type,
-                layoutType: item.layoutType || 'full-width',
-                order: item.order,
-                mediaData: mediaData
-              };
-            }).sort((a, b) => a.order - b.order);
+            // Helper to attach full media data from availableMedia
+            const attachMediaData = (items) => {
+              return items.map(item => {
+                const mediaId = item.mediaId?._id || item.mediaId;
+                const fullMedia = mediaList.find(m => m._id === mediaId);
+                return {
+                  mediaId: mediaId,
+                  type: item.type,
+                  mediaData: fullMedia || (item.mediaId?._id ? item.mediaId : null) // Fallback to populated data if available
+                };
+              });
+            };
 
-            setSelectedMedia(existingMedia);
+            // Map existing media content (blocks)
+            if (card.mediaContent && card.mediaContent.length > 0 && card.mediaContent[0].blockId) {
+              const sortedBlocks = card.mediaContent.sort((a, b) => a.order - b.order);
+              const blocksWithData = sortedBlocks.map(block => ({
+                ...block,
+                mediaItems: attachMediaData(block.mediaItems)
+              }));
+              setContentBlocks(blocksWithData);
+              setActiveBlockId(blocksWithData[0].blockId);
+            } else if (card.mediaContent && card.mediaContent.length > 0) {
+              // Legacy migration: wrap all media in a default block
+              const legacyMedia = attachMediaData(card.mediaContent);
+
+              const defaultBlock = {
+                blockId: `block-${Date.now()}`,
+                blockLayoutType: 'grid-standard',
+                order: 0,
+                mediaItems: legacyMedia
+              };
+              setContentBlocks([defaultBlock]);
+              setActiveBlockId(defaultBlock.blockId);
+            }
           } else {
             toast.error('Gift card not found');
             navigate(`/gallery/${folderId}`);
+          }
+        } else if (templateId) {
+          // 3. If template mode, fetch template details
+          try {
+            const templateResponse = await getTemplateById(templateId);
+            const template = templateResponse.data.data;
+
+            if (template && template.layoutConfig) {
+              const { themeColor, message, title } = template.layoutConfig;
+              if (themeColor) setThemeColor(themeColor);
+              if (message) setMessage(message);
+              // We might want to keep title blank or use template name as placeholder
+              // if (title) setTitle(title); 
+            }
+          } catch (error) {
+            console.error('Error fetching template:', error);
+            toast.error('Failed to load template');
           }
         }
       } catch (error) {
@@ -84,52 +136,109 @@ const GiftCardBuilder = () => {
   }, [folderId, giftCardId, navigate, isEditMode]);
 
   // Toggle media selection
+  // --- Block Management ---
+
+  const handleAddBlock = () => {
+    const newBlock = {
+      blockId: `block-${Date.now()}`,
+      blockLayoutType: 'grid-standard',
+      order: contentBlocks.length,
+      mediaItems: []
+    };
+    setContentBlocks(prev => [...prev, newBlock]);
+    setActiveBlockId(newBlock.blockId);
+  };
+
+  const handleRemoveBlock = (blockId) => {
+    if (contentBlocks.length <= 1) {
+      toast.warning('You must have at least one block');
+      return;
+    }
+    setContentBlocks(prev => {
+      const filtered = prev.filter(b => b.blockId !== blockId);
+      // Re-index orders
+      return filtered.map((b, i) => ({ ...b, order: i }));
+    });
+    if (activeBlockId === blockId) {
+      setActiveBlockId(contentBlocks.find(b => b.blockId !== blockId)?.blockId);
+    }
+  };
+
+  const handleUpdateBlockLayout = (blockId, layoutType) => {
+    setContentBlocks(prev => prev.map(b =>
+      b.blockId === blockId ? { ...b, blockLayoutType: layoutType } : b
+    ));
+  };
+
+  const handleReorderBlocks = (dragIndex, hoverIndex) => {
+    const newBlocks = [...contentBlocks];
+    const draggedBlock = newBlocks[dragIndex];
+    newBlocks.splice(dragIndex, 1);
+    newBlocks.splice(hoverIndex, 0, draggedBlock);
+
+    // Update order property
+    const reordered = newBlocks.map((b, i) => ({ ...b, order: i }));
+    setContentBlocks(reordered);
+  };
+
+  // --- Media Management within Blocks ---
+
+  // Toggle media selection (adds/removes from ACTIVE block)
   const handleToggleMedia = (media) => {
-    setSelectedMedia((prev) => {
-      const isSelected = prev.find((item) => item.mediaId === media._id);
-      if (isSelected) {
-        return prev.filter((item) => item.mediaId !== media._id);
+    setContentBlocks(prev => {
+      const newBlocks = [...prev];
+      const activeBlockIndex = newBlocks.findIndex(b => b.blockId === activeBlockId);
+
+      if (activeBlockIndex === -1) return prev;
+
+      const activeBlock = { ...newBlocks[activeBlockIndex] };
+      const existingMediaIndex = activeBlock.mediaItems.findIndex(item => item.mediaId === media._id);
+
+      if (existingMediaIndex >= 0) {
+        // Remove if already exists in this block
+        activeBlock.mediaItems = activeBlock.mediaItems.filter(item => item.mediaId !== media._id);
       } else {
-        return [
-          ...prev,
+        // Add to block
+        activeBlock.mediaItems = [
+          ...activeBlock.mediaItems,
           {
             mediaId: media._id,
             type: media.fileType,
-            layoutType: 'full-width',
-            order: prev.length,
-            mediaData: media,
-          },
+            mediaData: media
+          }
         ];
       }
+
+      newBlocks[activeBlockIndex] = activeBlock;
+      return newBlocks;
     });
   };
 
-  // Remove media
-  const handleRemoveMedia = (mediaId) => {
-    setSelectedMedia((prev) =>
-      prev.filter((item) => item.mediaId !== mediaId)
-        .map((item, i) => ({ ...item, order: i }))
-    );
+  // Remove media from specific block
+  const handleRemoveMediaFromBlock = (blockId, mediaId) => {
+    setContentBlocks(prev => prev.map(b => {
+      if (b.blockId === blockId) {
+        return {
+          ...b,
+          mediaItems: b.mediaItems.filter(m => m.mediaId !== mediaId)
+        };
+      }
+      return b;
+    }));
   };
 
-  // Move media up
-  const handleMoveMediaUp = (index) => {
-    if (index === 0) return;
-    setSelectedMedia((prev) => {
-      const newArray = [...prev];
-      [newArray[index], newArray[index - 1]] = [newArray[index - 1], newArray[index]];
-      return newArray.map((item, i) => ({ ...item, order: i }));
-    });
-  };
-
-  // Move media down
-  const handleMoveMediaDown = (index) => {
-    if (index === selectedMedia.length - 1) return;
-    setSelectedMedia((prev) => {
-      const newArray = [...prev];
-      [newArray[index], newArray[index + 1]] = [newArray[index + 1], newArray[index]];
-      return newArray.map((item, i) => ({ ...item, order: i }));
-    });
+  // Move media within a block
+  const handleMoveMediaInBlock = (blockId, dragIndex, hoverIndex) => {
+    setContentBlocks(prev => prev.map(b => {
+      if (b.blockId === blockId) {
+        const newItems = [...b.mediaItems];
+        const draggedItem = newItems[dragIndex];
+        newItems.splice(dragIndex, 1);
+        newItems.splice(hoverIndex, 0, draggedItem);
+        return { ...b, mediaItems: newItems };
+      }
+      return b;
+    }));
   };
 
   // Save gift card
@@ -139,7 +248,7 @@ const GiftCardBuilder = () => {
       return;
     }
 
-    if (selectedMedia.length === 0) {
+    if (contentBlocks.length === 0 || contentBlocks.every(b => b.mediaItems.length === 0)) {
       toast.error('Please select at least one media item');
       return;
     }
@@ -153,11 +262,14 @@ const GiftCardBuilder = () => {
         themeColor,
         albumId: folderId,
         password,
-        mediaContent: selectedMedia.map((item, index) => ({
-          mediaId: item.mediaId,
-          type: item.type,
-          layoutType: item.layoutType,
+        mediaContent: contentBlocks.map((block, index) => ({
+          blockId: block.blockId,
+          blockLayoutType: block.blockLayoutType,
           order: index,
+          mediaItems: block.mediaItems.map(item => ({
+            mediaId: item.mediaId,
+            type: item.type
+          }))
         })),
       };
 
@@ -208,12 +320,17 @@ const GiftCardBuilder = () => {
             setThemeColor={setThemeColor}
             password={password}
             setPassword={setPassword}
-            selectedMedia={selectedMedia}
+            contentBlocks={contentBlocks}
+            activeBlockId={activeBlockId}
+            setActiveBlockId={setActiveBlockId}
             availableMedia={availableMedia}
+            onAddBlock={handleAddBlock}
+            onRemoveBlock={handleRemoveBlock}
+            onUpdateBlockLayout={handleUpdateBlockLayout}
+            onReorderBlocks={handleReorderBlocks}
             onToggleMedia={handleToggleMedia}
-            onRemoveMedia={handleRemoveMedia}
-            onMoveMediaUp={handleMoveMediaUp}
-            onMoveMediaDown={handleMoveMediaDown}
+            onRemoveMediaFromBlock={handleRemoveMediaFromBlock}
+            onMoveMediaInBlock={handleMoveMediaInBlock}
             onSave={handleSave}
             saving={saving}
             isEditMode={isEditMode}
@@ -226,7 +343,7 @@ const GiftCardBuilder = () => {
             title={title}
             message={message}
             themeColor={themeColor}
-            selectedMedia={selectedMedia}
+            contentBlocks={contentBlocks}
           />
         </div>
       </div>

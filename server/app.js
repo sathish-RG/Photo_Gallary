@@ -31,6 +31,7 @@ app.use('/api/auth', auth);
 app.use('/api/media', media);
 app.use('/api/folders', folders);
 app.use('/api/gift-cards', giftCards);
+app.use('/api/templates', require('./routes/templateRoutes'));
 app.use('/api/admin', admin);
 
 module.exports = app;
