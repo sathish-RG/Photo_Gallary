@@ -1,0 +1,226 @@
+import { useState } from 'react';
+
+/**
+ * LivePreview Component
+ * Right side preview showing responsive device frames with real-time gift card preview
+ */
+const LivePreview = ({ title, message, themeColor, selectedMedia }) => {
+  const [viewMode, setViewMode] = useState('mobile'); // 'mobile', 'tablet', 'desktop'
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Device configurations
+  const deviceConfig = {
+    mobile: {
+      width: 'w-[390px]',
+      height: 'h-[844px]',
+      hasFrame: true,
+      hasNotch: true,
+    },
+    tablet: {
+      width: 'w-[768px]',
+      height: 'h-[1024px]',
+      hasFrame: true,
+      hasNotch: false,
+    },
+    desktop: {
+      width: 'w-full',
+      height: 'h-full',
+      hasFrame: false,
+      hasNotch: false,
+    },
+  };
+
+  const config = deviceConfig[viewMode];
+
+  return (
+    <div className={`bg-gradient-to-br from-gray-100 to-gray-200 flex overflow-hidden ${isFullscreen ? 'fixed inset-0 z-50' : 'h-full'}`}>
+      {/* Sidebar - Viewport Selection */}
+      <div className="flex flex-col items-center justify-center py-8 px-3 bg-white/80 backdrop-blur-sm border-r border-gray-200">
+        <div className="flex flex-col items-center gap-2 bg-gray-100 rounded-lg p-2">
+          {/* Mobile Button */}
+          <button
+            onClick={() => setViewMode('mobile')}
+            className={`p-3 rounded-md font-medium transition-all ${viewMode === 'mobile'
+              ? 'bg-blue-500 text-white shadow-md'
+              : 'bg-transparent text-gray-600 hover:bg-gray-200'
+              }`}
+            title="Mobile View (390px)"
+          >
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M17 2H7c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H7V4h10v16z" />
+            </svg>
+          </button>
+
+          {/* Tablet Button */}
+          <button
+            onClick={() => setViewMode('tablet')}
+            className={`p-3 rounded-md font-medium transition-all ${viewMode === 'tablet'
+              ? 'bg-blue-500 text-white shadow-md'
+              : 'bg-transparent text-gray-600 hover:bg-gray-200'
+              }`}
+            title="Tablet View (768px)"
+          >
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M21 4H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H3V6h18v12z" />
+            </svg>
+          </button>
+
+          {/* Desktop Button */}
+          <button
+            onClick={() => setViewMode('desktop')}
+            className={`p-3 rounded-md font-medium transition-all ${viewMode === 'desktop'
+              ? 'bg-blue-500 text-white shadow-md'
+              : 'bg-transparent text-gray-600 hover:bg-gray-200'
+              }`}
+            title="Desktop View (Full Width)"
+          >
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M21 2H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h7v2H8v2h8v-2h-2v-2h7c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H3V4h18v12z" />
+            </svg>
+          </button>
+
+          {/* Divider */}
+          <div className="w-full h-px bg-gray-300 my-1"></div>
+
+          {/* Fullscreen Toggle Button */}
+          <button
+            onClick={() => setIsFullscreen(!isFullscreen)}
+            className={`p-3 rounded-md font-medium transition-all ${isFullscreen
+              ? 'bg-purple-500 text-white shadow-md'
+              : 'bg-transparent text-gray-600 hover:bg-gray-200'
+              }`}
+            title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+          >
+            {isFullscreen ? (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+              </svg>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Preview Canvas */}
+      <div className="flex-1 flex items-center justify-center p-4 overflow-auto">
+        {/* Device Frame Container with Smooth Transition */}
+        <div
+          className={`relative transition-all duration-500 ease-in-out ${viewMode === 'desktop' ? 'w-full h-full' : ''
+            }`}
+          style={{
+            width: viewMode === 'mobile' ? '390px' : viewMode === 'tablet' ? '768px' : '100%',
+            height: viewMode === 'mobile' ? '75vh' : viewMode === 'tablet' ? '80vh' : '100%',
+          }}
+        >
+          {/* Shadow (only for mobile/tablet) */}
+          {config.hasFrame && (
+            <div className="absolute inset-0 bg-black/20 blur-2xl transform translate-y-4 -z-10"></div>
+          )}
+
+          {/* Device Container */}
+          <div
+            className={`relative h-full transition-all duration-500 ${viewMode === 'mobile'
+              ? 'bg-gray-900 rounded-[3rem] p-3 shadow-2xl'
+              : viewMode === 'tablet'
+                ? 'bg-gray-800 rounded-3xl p-4 shadow-xl'
+                : 'bg-transparent'
+              }`}
+          >
+            {/* Phone Notch (mobile only) */}
+            {config.hasNotch && (
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-7 bg-gray-900 rounded-b-3xl z-10"></div>
+            )}
+
+            {/* Screen Content */}
+            <div
+              className={`relative bg-white overflow-hidden h-full ${viewMode === 'mobile'
+                ? 'rounded-[2.5rem]'
+                : viewMode === 'tablet'
+                  ? 'rounded-2xl'
+                  : 'rounded-lg shadow-2xl'
+                }`}
+            >
+              {/* Gift Card Content */}
+              <div
+                className="h-full overflow-y-auto"
+                style={{ backgroundColor: themeColor }}
+              >
+                {/* Header Section */}
+                <div className={`p-6 text-white ${viewMode === 'desktop' ? 'max-w-4xl mx-auto' : ''}`}>
+                  <h1 className={`font-bold mb-3 drop-shadow-lg ${viewMode === 'desktop' ? 'text-5xl' : viewMode === 'tablet' ? 'text-4xl' : 'text-3xl'
+                    }`}>
+                    {title || 'Your Title Here'}
+                  </h1>
+                  <p className={`leading-relaxed drop-shadow-md whitespace-pre-wrap ${viewMode === 'desktop' ? 'text-xl' : 'text-lg'
+                    }`}>
+                    {message || 'Your heartfelt message will appear here...'}
+                  </p>
+                </div>
+
+                {/* Media Grid */}
+                {selectedMedia.length > 0 && (
+                  <div className={`px-4 pb-6 ${viewMode === 'desktop' ? 'max-w-4xl mx-auto' : ''}`}>
+                    <div className={`space-y-3 ${viewMode === 'desktop' ? 'grid grid-cols-2 gap-4 space-y-0' : ''
+                      }`}>
+                      {selectedMedia.map((item, index) => (
+                        <div key={item.mediaId} className="rounded-xl overflow-hidden shadow-lg bg-white">
+                          {item.type === 'image' && (
+                            <img
+                              src={item.mediaData.filePath}
+                              alt={`Media ${index + 1}`}
+                              className="w-full h-auto object-cover"
+                            />
+                          )}
+                          {item.type === 'video' && (
+                            <div className="relative w-full h-48 bg-gray-900 flex items-center justify-center">
+                              <video
+                                src={item.mediaData.filePath}
+                                className="w-full h-full object-cover"
+                                controls
+                              />
+                            </div>
+                          )}
+                          {item.type === 'audio' && (
+                            <div className="p-4 bg-gradient-to-r from-purple-500 to-pink-500">
+                              <audio
+                                src={item.mediaData.filePath}
+                                controls
+                                className="w-full"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Empty State */}
+                {selectedMedia.length === 0 && (
+                  <div className="flex items-center justify-center h-64 px-6">
+                    <div className="text-center text-white/80">
+                      <svg className="w-16 h-16 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <p className="text-sm">Select media to preview</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Phone Home Indicator (mobile only) */}
+            {config.hasNotch && (
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-white/30 rounded-full"></div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default LivePreview;
