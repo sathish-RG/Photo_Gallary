@@ -1,0 +1,26 @@
+[2025-11-27T17:24:47.853Z] Error: Cast to ObjectId failed for value "123" (type string) at path "_id" for model "User"
+Stack: CastError: Cast to ObjectId failed for value "123" (type string) at path "_id" for model "User"
+    at SchemaObjectId.cast (C:\Users\User\Desktop\New folder\Photo_Gallary\server\node_modules\mongoose\lib\schema\objectId.js:253:11)
+    at SchemaType.applySetters (C:\Users\User\Desktop\New folder\Photo_Gallary\server\node_modules\mongoose\lib\schemaType.js:1280:12)
+    at SchemaType.castForQuery (C:\Users\User\Desktop\New folder\Photo_Gallary\server\node_modules\mongoose\lib\schemaType.js:1706:17)
+    at cast (C:\Users\User\Desktop\New folder\Photo_Gallary\server\node_modules\mongoose\lib\cast.js:390:32)
+    at Query.cast (C:\Users\User\Desktop\New folder\Photo_Gallary\server\node_modules\mongoose\lib\query.js:5016:12)
+    at Query._castConditions (C:\Users\User\Desktop\New folder\Photo_Gallary\server\node_modules\mongoose\lib\query.js:2380:10)
+    at model.Query._findOne (C:\Users\User\Desktop\New folder\Photo_Gallary\server\node_modules\mongoose\lib\query.js:2708:8)
+    at model.Query.exec (C:\Users\User\Desktop\New folder\Photo_Gallary\server\node_modules\mongoose\lib\query.js:4627:80)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async exports.getUserContent (C:\Users\User\Desktop\New folder\Photo_Gallary\server\controllers\adminController.js:91:18)
+
+[2025-11-27T17:24:48.122Z] Error: Cast to ObjectId failed for value "123" (type string) at path "_id" for model "User"
+Stack: CastError: Cast to ObjectId failed for value "123" (type string) at path "_id" for model "User"
+    at SchemaObjectId.cast (C:\Users\User\Desktop\New folder\Photo_Gallary\server\node_modules\mongoose\lib\schema\objectId.js:253:11)
+    at SchemaType.applySetters (C:\Users\User\Desktop\New folder\Photo_Gallary\server\node_modules\mongoose\lib\schemaType.js:1280:12)
+    at SchemaType.castForQuery (C:\Users\User\Desktop\New folder\Photo_Gallary\server\node_modules\mongoose\lib\schemaType.js:1706:17)
+    at cast (C:\Users\User\Desktop\New folder\Photo_Gallary\server\node_modules\mongoose\lib\cast.js:390:32)
+    at Query.cast (C:\Users\User\Desktop\New folder\Photo_Gallary\server\node_modules\mongoose\lib\query.js:5016:12)
+    at Query._castConditions (C:\Users\User\Desktop\New folder\Photo_Gallary\server\node_modules\mongoose\lib\query.js:2380:10)
+    at model.Query._findOne (C:\Users\User\Desktop\New folder\Photo_Gallary\server\node_modules\mongoose\lib\query.js:2708:8)
+    at model.Query.exec (C:\Users\User\Desktop\New folder\Photo_Gallary\server\node_modules\mongoose\lib\query.js:4627:80)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async exports.getUserContent (C:\Users\User\Desktop\New folder\Photo_Gallary\server\controllers\adminController.js:91:18)
+

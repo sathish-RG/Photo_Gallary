@@ -5,6 +5,7 @@ import { NavLink } from 'react-router-dom';
 const links = [
   { to: '/admin/dashboard', label: 'Dashboard Overview' },
   { to: '/admin/users', label: 'User Management' },
+  { to: '/admin/templates/create', label: 'Create Template' },
   { to: '/admin/reported', label: 'Reported Content' },
 ];
 

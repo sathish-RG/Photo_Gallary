@@ -28,7 +28,7 @@ exports.createTemplate = async (req, res) => {
 // @access  Public
 exports.getAllTemplates = async (req, res) => {
   try {
-    const templates = await Template.find().select('name thumbnailUrl createdAt');
+    const templates = await Template.find().select('name description category thumbnailUrl styleConfig layoutConfig createdAt');
 
     res.status(200).json({
       success: true,

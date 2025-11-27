@@ -76,6 +76,8 @@ exports.updateUserStatus = async (req, res) => {
   }
 };
 
+const mongoose = require('mongoose');
+
 /**
  * @desc    Get specific user's content (folders and media)
  * @route   GET /api/admin/users/:id/content
@@ -84,6 +86,14 @@ exports.updateUserStatus = async (req, res) => {
 exports.getUserContent = async (req, res) => {
   try {
     const { id } = req.params;
+
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid User ID format',
+      });
+    }
 
     const user = await User.findById(id);
     if (!user) {

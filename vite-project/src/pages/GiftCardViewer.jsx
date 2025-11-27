@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Confetti from 'react-confetti';
 import { toast } from 'react-toastify';
+import html2canvas from 'html2canvas';
 import { getGiftCardBySlug, unlockGiftCard } from '../api/giftCardApi';
 
 /**
@@ -22,6 +23,10 @@ const GiftCardViewer = () => {
   const [isLocked, setIsLocked] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
   const [unlocking, setUnlocking] = useState(false);
+
+  // Download state
+  const [downloadingImage, setDownloadingImage] = useState(false);
+  const giftCardRef = useRef(null);
 
   useEffect(() => {
     // Set window size after component mounts (client-side only)
@@ -84,6 +89,48 @@ const GiftCardViewer = () => {
       setPasswordInput('');
     } finally {
       setUnlocking(false);
+    }
+  };
+
+  const handleDownloadImage = async () => {
+    if (!giftCardRef.current || downloadingImage) return;
+
+    try {
+      setDownloadingImage(true);
+      toast.info('Generating image... This may take a few seconds.');
+
+      // Use html2canvas to capture the gift card
+      const canvas = await html2canvas(giftCardRef.current, {
+        useCORS: true, // Enable CORS for external images (Cloudinary)
+        scale: 2, // Higher quality image
+        backgroundColor: null,
+        logging: false,
+      });
+
+      // Convert canvas to blob
+      const dataUrl = canvas.toDataURL('image/png');
+
+      // Create sanitized filename from gift card title
+      const sanitizedTitle = giftCard.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+      const filename = `${sanitizedTitle || 'gift-card'}.png`;
+
+      // Create temporary anchor element and trigger download
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.success('Gift card downloaded successfully!');
+    } catch (error) {
+      console.error('Error downloading image:', error);
+      toast.error('Failed to download image. Please try again.');
+    } finally {
+      setDownloadingImage(false);
     }
   };
 
@@ -203,8 +250,28 @@ const GiftCardViewer = () => {
         />
       )}
 
+      {/* Download Button */}
+      <button
+        onClick={handleDownloadImage}
+        disabled={downloadingImage}
+        className="fixed top-6 right-6 z-50 bg-white/90 hover:bg-white backdrop-blur-lg text-gray-800 p-4 rounded-full shadow-2xl transition-all transform hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed border-2"
+        style={{ borderColor: `${themeColor}40` }}
+        title="Download as Image"
+      >
+        {downloadingImage ? (
+          <svg className="animate-spin h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        ) : (
+          <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+        )}
+      </button>
+
       {/* Content Container */}
-      <div className="relative z-10 max-w-5xl mx-auto p-6 sm:p-8 md:p-12">
+      <div ref={giftCardRef} className="relative z-10 max-w-5xl mx-auto p-6 sm:p-8 md:p-12">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -30 }}

@@ -5,6 +5,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { getMedia } from '../api/mediaApi';
 import { createGiftCard, getAlbumGiftCards, updateGiftCard } from '../api/giftCardApi';
 import { getTemplateById } from '../api/templateApi';
+import QRCodeGenerator from '../components/QRCodeGenerator';
 import ControlSidebar from '../components/ControlSidebar';
 import LivePreview from '../components/LivePreview';
 
@@ -367,9 +368,7 @@ const GiftCardBuilder = () => {
             </div>
 
             {/* QR Code */}
-            <div className="bg-white p-6 rounded-2xl inline-block mb-6 shadow-lg mx-auto flex justify-center">
-              <QRCodeSVG value={giftCardUrl} size={180} level="H" />
-            </div>
+            <QRCodeGenerator value={giftCardUrl} themeColor={themeColor} />
 
             {/* URL Display */}
             <div className="mb-6">

@@ -18,6 +18,7 @@ import UserFiles from './pages/UserFiles';
 import AdminRoute from './components/AdminRoute';
 import AdminLayout from './components/AdminLayout';
 import ReportedContent from './pages/ReportedContent';
+import AdminCreateTemplate from './pages/AdminCreateTemplate';
 import './App.css';
 
 const PrivateRoute = ({ children }) => {
@@ -167,6 +168,16 @@ const AppContent = () => {
         <Route path="/view/:slug" element={<GiftCardViewer />} />
         {/* Admin routes */}
         <Route
+          path="/admin/templates/create"
+          element={
+            <AdminRoute>
+              <AdminLayout>
+                <AdminCreateTemplate />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
           path="/admin/dashboard"
           element={
             <AdminRoute>
@@ -206,6 +217,7 @@ const AppContent = () => {
             </AdminRoute>
           }
         />
+
       </Routes>
     </>
   );
