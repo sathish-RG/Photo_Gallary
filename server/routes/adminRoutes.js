@@ -6,7 +6,10 @@ const {
   getAllUsers,
   updateUserStatus,
   getUserContent,
+  deleteUserFile,
 } = require('../controllers/adminController');
+
+const { getAdminConfig, updateAdminConfig } = require('../controllers/adminConfigController');
 
 // All routes are protected and require admin privileges
 router.use(protect);
@@ -20,5 +23,11 @@ router.get('/reported', (req, res) => {
 });
 
 router.get('/users/:id/content', getUserContent);
+router.delete('/users/:userId/files/:fileId', deleteUserFile);
+
+router
+  .route('/config')
+  .get(getAdminConfig)
+  .put(updateAdminConfig);
 
 module.exports = router;

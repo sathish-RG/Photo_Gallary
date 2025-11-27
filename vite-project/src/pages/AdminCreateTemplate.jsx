@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
 import axios from 'axios';
@@ -74,6 +74,45 @@ const AdminCreateTemplate = () => {
     }
   };
 
+  const { id } = useParams(); // Get ID from URL if editing
+  const isEditMode = !!id;
+
+  console.log('AdminCreateTemplate Render:', { id, isEditMode });
+
+  useEffect(() => {
+    console.log('useEffect triggered', { id, isEditMode });
+    if (isEditMode) {
+      fetchTemplateData();
+    }
+  }, [id]);
+
+  const fetchTemplateData = async () => {
+    console.log('Fetching template data for ID:', id);
+    try {
+      setLoading(true);
+      const res = await axios.get(`http://localhost:5000/api/templates/${id}`);
+      console.log('Fetch success:', res.data);
+      const template = res.data.data;
+
+      setFormData({
+        name: template.name,
+        description: template.description,
+        category: template.category,
+        thumbnailUrl: template.thumbnailUrl,
+      });
+
+      if (template.styleConfig) {
+        setStyleConfig(template.styleConfig);
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to load template data');
+      // navigate('/admin/templates');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -98,12 +137,18 @@ const AdminCreateTemplate = () => {
         }
       };
 
-      await axios.post('http://localhost:5000/api/templates', payload, config);
-      toast.success('Template created successfully!');
-      navigate('/admin/dashboard');
+      if (isEditMode) {
+        await axios.put(`http://localhost:5000/api/templates/${id}`, payload, config);
+        toast.success('Template updated successfully!');
+      } else {
+        await axios.post('http://localhost:5000/api/templates', payload, config);
+        toast.success('Template created successfully!');
+      }
+
+      navigate('/admin/templates');
     } catch (err) {
       console.error(err);
-      toast.error(err.response?.data?.error || 'Failed to create template');
+      toast.error(err.response?.data?.error || 'Failed to save template');
     } finally {
       setLoading(false);
     }
@@ -113,9 +158,9 @@ const AdminCreateTemplate = () => {
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">Create New Template</h1>
+          <h1 className="text-3xl font-bold text-gray-800">{isEditMode ? 'Edit Template' : 'Create New Template'}</h1>
           <button
-            onClick={() => navigate('/admin/dashboard')}
+            onClick={() => navigate('/admin/templates')}
             className="text-gray-600 hover:text-gray-900"
           >
             Cancel
@@ -302,7 +347,7 @@ const AdminCreateTemplate = () => {
               disabled={loading}
               className="w-full bg-gradient-to-r from-pink-500 to-rose-600 text-white py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-50"
             >
-              {loading ? 'Creating...' : 'Create Template'}
+              {loading ? 'Saving...' : (isEditMode ? 'Update Template' : 'Create Template')}
             </button>
           </div>
 

@@ -126,3 +126,47 @@ exports.getUserContent = async (req, res) => {
     });
   }
 };
+
+/**
+ * @desc    Delete user file
+ * @route   DELETE /api/admin/users/:userId/files/:fileId
+ * @access  Private/Admin
+ */
+exports.deleteUserFile = async (req, res) => {
+  try {
+    const { userId, fileId } = req.params;
+
+    // Validate ObjectIds
+    if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(fileId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid ID format',
+      });
+    }
+
+    const media = await Media.findOne({ _id: fileId, user: userId });
+
+    if (!media) {
+      return res.status(404).json({
+        success: false,
+        error: 'File not found',
+      });
+    }
+
+    // In a real app, we would also delete the file from storage (S3/Cloudinary/Local)
+    // For now, we just remove the database record
+    await Media.findByIdAndDelete(fileId);
+
+    res.status(200).json({
+      success: true,
+      message: 'File deleted successfully',
+      data: { fileId }
+    });
+  } catch (error) {
+    console.error('Error deleting user file:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete file',
+    });
+  }
+};

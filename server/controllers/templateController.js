@@ -70,3 +70,63 @@ exports.getTemplateById = async (req, res) => {
     });
   }
 };
+// @desc    Update template
+// @route   PUT /api/templates/:id
+// @access  Private/Admin
+exports.updateTemplate = async (req, res) => {
+  try {
+    let template = await Template.findById(req.params.id);
+
+    if (!template) {
+      return res.status(404).json({
+        success: false,
+        error: 'Template not found'
+      });
+    }
+
+    template = await Template.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+      runValidators: true
+    });
+
+    res.status(200).json({
+      success: true,
+      data: template
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      error: 'Server Error'
+    });
+  }
+};
+
+// @desc    Delete template
+// @route   DELETE /api/templates/:id
+// @access  Private/Admin
+exports.deleteTemplate = async (req, res) => {
+  try {
+    const template = await Template.findById(req.params.id);
+
+    if (!template) {
+      return res.status(404).json({
+        success: false,
+        error: 'Template not found'
+      });
+    }
+
+    await template.deleteOne();
+
+    res.status(200).json({
+      success: true,
+      data: {}
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      error: 'Server Error'
+    });
+  }
+};

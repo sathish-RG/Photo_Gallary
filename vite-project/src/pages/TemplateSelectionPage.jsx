@@ -118,12 +118,31 @@ const TemplateSelectionPage = () => {
               className="group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-gray-200 hover:border-purple-400 transform hover:scale-105"
             >
               {/* Thumbnail */}
-              <div className="relative h-56 overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
-                <img
-                  src={template.thumbnailUrl}
-                  alt={template.name}
-                  className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700"
-                />
+              <div className="relative h-56 overflow-hidden bg-gray-100">
+                {template.thumbnailUrl ? (
+                  <img
+                    src={template.thumbnailUrl}
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'flex';
+                    }}
+                    alt={template.name}
+                    className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700"
+                  />
+                ) : null}
+
+                <div
+                  className={`w-full h-full absolute inset-0 flex items-center justify-center bg-gradient-to-br ${template.category === 'wedding' ? 'from-pink-400 to-rose-500' :
+                      template.category === 'party' ? 'from-purple-500 to-indigo-600' :
+                        template.category === 'retro' ? 'from-amber-400 to-orange-500' :
+                          template.category === 'modern' ? 'from-blue-400 to-cyan-500' :
+                            template.category === 'elegant' ? 'from-rose-400 to-slate-600' :
+                              'from-gray-400 to-gray-600'
+                    } transform group-hover:scale-110 transition-transform duration-700`}
+                  style={{ display: template.thumbnailUrl ? 'none' : 'flex' }}
+                >
+                  <span className="text-white font-bold text-2xl drop-shadow-md px-4 text-center">{template.name}</span>
+                </div>
 
                 {/* Category Badge */}
                 <div className="absolute top-4 right-4">

@@ -2,7 +2,9 @@ const express = require('express');
 const {
   createTemplate,
   getAllTemplates,
-  getTemplateById
+  getTemplateById,
+  updateTemplate,
+  deleteTemplate
 } = require('../controllers/templateController');
 
 const router = express.Router();
@@ -17,6 +19,8 @@ router
 
 router
   .route('/:id')
-  .get(getTemplateById);
+  .get(getTemplateById)
+  .put(protect, adminMiddleware, updateTemplate)
+  .delete(protect, adminMiddleware, deleteTemplate);
 
 module.exports = router;

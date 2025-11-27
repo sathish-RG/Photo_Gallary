@@ -16,3 +16,7 @@ export const getUserContent = async (userId) => {
 export const getReportedContent = async () => {
   return adminApi.get('/reported');
 };
+
+export const deleteUserFile = async (userId, fileId) => {
+  return adminApi.delete(`/users/${userId}/files/${fileId}`);
+};
