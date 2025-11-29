@@ -5,6 +5,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { getMedia } from '../api/mediaApi';
 import { createGiftCard, getAlbumGiftCards, updateGiftCard } from '../api/giftCardApi';
 import { getTemplateById } from '../api/templateApi';
+import { uploadFileToCloudinary } from '../utils/cloudinaryStorage';
 import QRCodeGenerator from '../components/QRCodeGenerator';
 import ControlSidebar from '../components/ControlSidebar';
 import LivePreview from '../components/LivePreview';
@@ -18,8 +19,12 @@ const GiftCardBuilder = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
-  const templateId = searchParams.get('templateId');
+  const urlTemplateId = searchParams.get('templateId');
   const isEditMode = !!giftCardId;
+
+  // State for template ID and Data
+  const [selectedTemplateId, setSelectedTemplateId] = useState(urlTemplateId || null);
+  const [templateData, setTemplateData] = useState(null);
 
   // Media from the album
   const [availableMedia, setAvailableMedia] = useState([]);
@@ -42,6 +47,7 @@ const GiftCardBuilder = () => {
   const [message, setMessage] = useState('');
   const [themeColor, setThemeColor] = useState('#ec4899');
   const [password, setPassword] = useState('');
+  const [branding, setBranding] = useState({ name: '', logoUrl: '' });
 
   // Generated gift card data
   const [giftCardUrl, setGiftCardUrl] = useState('');
@@ -67,6 +73,28 @@ const GiftCardBuilder = () => {
             setMessage(card.message);
             setThemeColor(card.themeColor);
             setGiftCardUrl(`${window.location.origin}/view/${card.uniqueSlug}`);
+            if (card.branding) {
+              setBranding(card.branding);
+            }
+
+            // Set template ID and Data if exists
+            if (card.template) {
+              const tmplId = typeof card.template === 'object' ? card.template._id : card.template;
+              setSelectedTemplateId(tmplId);
+
+              // If template is populated, set data directly
+              if (typeof card.template === 'object' && card.template.layoutSlots) {
+                setTemplateData(card.template);
+              } else {
+                // Otherwise fetch it
+                try {
+                  const tmplRes = await getTemplateById(tmplId);
+                  setTemplateData(tmplRes.data.data);
+                } catch (e) {
+                  console.error('Failed to fetch linked template details', e);
+                }
+              }
+            }
 
             // Helper to attach full media data from availableMedia
             const attachMediaData = (items) => {
@@ -107,11 +135,12 @@ const GiftCardBuilder = () => {
             toast.error('Gift card not found');
             navigate(`/gallery/${folderId}`);
           }
-        } else if (templateId) {
+        } else if (selectedTemplateId) {
           // 3. If template mode, fetch template details
           try {
-            const templateResponse = await getTemplateById(templateId);
+            const templateResponse = await getTemplateById(selectedTemplateId);
             const template = templateResponse.data.data;
+            setTemplateData(template);
 
             if (template && template.layoutConfig) {
               const { themeColor, message, title } = template.layoutConfig;
@@ -134,7 +163,7 @@ const GiftCardBuilder = () => {
     };
 
     init();
-  }, [folderId, giftCardId, navigate, isEditMode]);
+  }, [folderId, giftCardId, navigate, isEditMode, selectedTemplateId]);
 
   // Toggle media selection
   // --- Block Management ---
@@ -242,6 +271,17 @@ const GiftCardBuilder = () => {
     }));
   };
 
+  const handleLogoUpload = async (file) => {
+    try {
+      const url = await uploadFileToCloudinary(file);
+      setBranding(prev => ({ ...prev, logoUrl: url }));
+      toast.success('Logo uploaded successfully');
+    } catch (error) {
+      console.error('Logo upload failed:', error);
+      toast.error('Failed to upload logo');
+    }
+  };
+
   // Save gift card
   const handleSave = async () => {
     if (!title.trim() || !message.trim()) {
@@ -263,6 +303,8 @@ const GiftCardBuilder = () => {
         themeColor,
         albumId: folderId,
         password,
+        templateId: selectedTemplateId, // Include template ID
+        branding,
         mediaContent: contentBlocks.map((block, index) => ({
           blockId: block.blockId,
           blockLayoutType: block.blockLayoutType,
@@ -309,9 +351,9 @@ const GiftCardBuilder = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-pink-100">
       {/* Split Screen Layout */}
-      <div className="flex h-screen">
-        {/* Left: Control Sidebar (35%) */}
-        <div className="w-[35%] border-r border-gray-200 bg-white">
+      <div className="flex flex-col lg:flex-row min-h-screen">
+        {/* Left: Control Sidebar (35% on desktop, 100% on mobile) */}
+        <div className="w-full lg:w-[35%] border-r border-gray-200 bg-white order-2 lg:order-1">
           <ControlSidebar
             title={title}
             setTitle={setTitle}
@@ -335,34 +377,39 @@ const GiftCardBuilder = () => {
             onSave={handleSave}
             saving={saving}
             isEditMode={isEditMode}
+            branding={branding}
+            setBranding={setBranding}
+            onUploadLogo={handleLogoUpload}
           />
         </div>
 
-        {/* Right: Live Preview (65%) */}
-        <div className="w-[65%]">
+        {/* Right: Live Preview (65% on desktop, 100% on mobile) */}
+        <div className="w-full lg:w-[65%] order-1 lg:order-2 bg-gray-100 sticky top-0 z-10 lg:static h-[50vh] lg:h-auto">
           <LivePreview
             title={title}
             message={message}
             themeColor={themeColor}
             contentBlocks={contentBlocks}
+            template={templateData}
+            branding={branding}
           />
         </div>
       </div>
 
       {/* Success Modal */}
       {showSuccessModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full border border-pink-100">
-            <div className="text-center mb-6">
-              <div className="inline-block p-4 bg-gradient-to-br from-pink-400 to-rose-500 rounded-full mb-4">
-                <svg className="h-16 w-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl p-6 sm:p-8 max-w-md w-full border border-pink-100 my-8 max-h-[90vh] overflow-y-auto">
+            <div className="text-center mb-4 sm:mb-6">
+              <div className="inline-block p-3 sm:p-4 bg-gradient-to-br from-pink-400 to-rose-500 rounded-full mb-3 sm:mb-4">
+                <svg className="h-12 w-12 sm:h-16 sm:w-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <h2 className="text-3xl font-bold text-gray-800 mb-2">
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">
                 🎉 Success!
               </h2>
-              <p className="text-gray-600">
+              <p className="text-gray-600 text-sm sm:text-base">
                 Your gift card is ready to share
               </p>
             </div>
@@ -371,7 +418,7 @@ const GiftCardBuilder = () => {
             <QRCodeGenerator value={giftCardUrl} themeColor={themeColor} />
 
             {/* URL Display */}
-            <div className="mb-6">
+            <div className="mb-4 sm:mb-6">
               <div className="flex items-center gap-2 bg-pink-50 p-3 rounded-xl border border-pink-200">
                 <input
                   type="text"
@@ -389,7 +436,7 @@ const GiftCardBuilder = () => {
             </div>
 
             {/* Actions */}
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={() => setShowSuccessModal(false)}
                 className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-all"

@@ -222,3 +222,104 @@ exports.verifyFolderPassword = async (req, res) => {
     });
   }
 };
+
+/**
+ * @desc    Get folder settings (watermark and download settings)
+ * @route   GET /api/folders/:id/settings
+ * @access  Private (requires authentication and ownership)
+ */
+exports.getFolderSettings = async (req, res) => {
+  try {
+    const folder = await Folder.findById(req.params.id);
+
+    if (!folder) {
+      return res.status(404).json({
+        success: false,
+        error: 'Folder not found',
+      });
+    }
+
+    // Make sure user owns the folder
+    if (folder.user.toString() !== req.user.id) {
+      return res.status(401).json({
+        success: false,
+        error: 'Not authorized to access this folder',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        watermarkSettings: folder.watermarkSettings,
+        allowDownload: folder.allowDownload,
+      },
+    });
+  } catch (error) {
+    console.error('Get folder settings error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server error while fetching folder settings',
+    });
+  }
+};
+
+/**
+ * @desc    Update folder settings (watermark and download settings)
+ * @route   PUT /api/folders/:id/settings
+ * @access  Private (requires authentication and ownership)
+ */
+exports.updateFolderSettings = async (req, res) => {
+  try {
+    const { watermarkSettings, allowDownload } = req.body;
+
+    const folder = await Folder.findById(req.params.id);
+
+    if (!folder) {
+      return res.status(404).json({
+        success: false,
+        error: 'Folder not found',
+      });
+    }
+
+    // Make sure user owns the folder
+    if (folder.user.toString() !== req.user.id) {
+      return res.status(401).json({
+        success: false,
+        error: 'Not authorized to update this folder',
+      });
+    }
+
+    // Update watermark settings if provided
+    if (watermarkSettings !== undefined) {
+      folder.watermarkSettings = {
+        enabled: watermarkSettings.enabled !== undefined ? watermarkSettings.enabled : folder.watermarkSettings.enabled,
+        text: watermarkSettings.text || folder.watermarkSettings.text,
+        opacity: watermarkSettings.opacity !== undefined ? watermarkSettings.opacity : folder.watermarkSettings.opacity,
+        position: watermarkSettings.position || folder.watermarkSettings.position,
+        fontSize: watermarkSettings.fontSize || folder.watermarkSettings.fontSize,
+      };
+    }
+
+    // Update download permission if provided
+    if (allowDownload !== undefined) {
+      folder.allowDownload = allowDownload;
+    }
+
+    await folder.save();
+
+    res.status(200).json({
+      success: true,
+      data: {
+        watermarkSettings: folder.watermarkSettings,
+        allowDownload: folder.allowDownload,
+      },
+      message: 'Folder settings updated successfully',
+    });
+  } catch (error) {
+    console.error('Update folder settings error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server error while updating folder settings',
+    });
+  }
+};

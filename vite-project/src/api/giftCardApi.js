@@ -77,3 +77,15 @@ export const deleteGiftCard = async (id) => {
 export const unlockGiftCard = async (slug, password) => {
   return axios.post(`${API_URL}/gift-cards/unlock/${slug}`, { password });
 };
+/**
+ * Download gift card photos as ZIP
+ * @param {string} slug - Gift card slug
+ * @param {string} password - Optional password
+ * @returns {Promise} API response with blob data
+ */
+export const downloadGiftCardZip = async (slug, password) => {
+  return axios.post(`${API_URL}/gift-cards/download-zip/${slug}`, 
+    { password },
+    { responseType: 'blob' }
+  );
+};

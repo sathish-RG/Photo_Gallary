@@ -1,5 +1,7 @@
+
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import SlotBasedLayout from './SlotBasedLayout';
 
 const Slideshow = ({ mediaItems }) => {
   const [index, setIndex] = useState(0);
@@ -77,7 +79,7 @@ const Slideshow = ({ mediaItems }) => {
  * LivePreview Component
  * Right side preview showing responsive device frames with real-time gift card preview
  */
-const LivePreview = ({ title, message, themeColor, contentBlocks = [] }) => {
+const LivePreview = ({ title, message, themeColor, contentBlocks = [], template = null, branding = null }) => {
   const [viewMode, setViewMode] = useState('mobile'); // 'mobile', 'tablet', 'desktop'
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -221,6 +223,20 @@ const LivePreview = ({ title, message, themeColor, contentBlocks = [] }) => {
                 className="h-full overflow-y-auto"
                 style={{ backgroundColor: themeColor }}
               >
+                {/* Branding Header */}
+                {branding && (branding.name || branding.logoUrl) && (
+                  <div className="flex items-center gap-3 pt-6 pb-2 px-6">
+                    {branding.logoUrl && (
+                      <img src={branding.logoUrl} alt={branding.name} className="h-10 object-contain" />
+                    )}
+                    {branding.name && (
+                      <p className="text-sm font-semibold uppercase tracking-wider text-white drop-shadow-sm">
+                        {branding.name}
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 {/* Header Section */}
                 <div className={`p-6 text-white ${viewMode === 'desktop' ? 'max-w-4xl mx-auto' : ''}`}>
                   <h1 className={`font-bold mb-3 drop-shadow-lg ${viewMode === 'desktop' ? 'text-5xl' : viewMode === 'tablet' ? 'text-4xl' : 'text-3xl'
@@ -239,41 +255,53 @@ const LivePreview = ({ title, message, themeColor, contentBlocks = [] }) => {
                     <div key={block.blockId}>
                       {block.mediaItems.length > 0 && (
                         <>
-                          {/* Slideshow Layout */}
-                          {block.blockLayoutType === 'slideshow' && (
-                            <Slideshow mediaItems={block.mediaItems} />
-                          )}
+                          {/* Slot-Based Layout */}
+                          {template?.layoutSlots && template.layoutSlots.length > 0 ? (
+                            <SlotBasedLayout
+                              layoutSlots={template.layoutSlots}
+                              mediaItems={block.mediaItems}
+                              themeColor={themeColor}
+                              baseHeight={template.layoutConfig?.canvasHeight || 600}
+                            />
+                          ) : (
+                            <>
+                              {/* Slideshow Layout */}
+                              {block.blockLayoutType === 'slideshow' && (
+                                <Slideshow mediaItems={block.mediaItems} />
+                              )}
 
-                          {/* Grid Standard Layout */}
-                          {block.blockLayoutType === 'grid-standard' && (
-                            <div className="grid grid-cols-2 gap-2">
-                              {block.mediaItems.map((item) => (
-                                <div key={item.mediaId} className="aspect-square rounded-lg overflow-hidden shadow-sm bg-white">
-                                  {item.type === 'image' && (
-                                    <img src={item.mediaData.filePath} alt="" className="w-full h-full object-cover" />
-                                  )}
-                                  {item.type === 'video' && (
-                                    <video src={item.mediaData.filePath} className="w-full h-full object-cover" />
-                                  )}
+                              {/* Grid Standard Layout */}
+                              {block.blockLayoutType === 'grid-standard' && (
+                                <div className="grid grid-cols-2 gap-2">
+                                  {block.mediaItems.map((item) => (
+                                    <div key={item.mediaId} className="aspect-square rounded-lg overflow-hidden shadow-sm bg-white">
+                                      {item.type === 'image' && (
+                                        <img src={item.mediaData.filePath} alt="" className="w-full h-full object-cover" />
+                                      )}
+                                      {item.type === 'video' && (
+                                        <video src={item.mediaData.filePath} className="w-full h-full object-cover" />
+                                      )}
+                                    </div>
+                                  ))}
                                 </div>
-                              ))}
-                            </div>
-                          )}
+                              )}
 
-                          {/* Collage Layout (Masonry-ish) */}
-                          {block.blockLayoutType === 'grid-collage' && (
-                            <div className="columns-2 gap-2 space-y-2">
-                              {block.mediaItems.map((item) => (
-                                <div key={item.mediaId} className="break-inside-avoid rounded-lg overflow-hidden shadow-sm bg-white mb-2">
-                                  {item.type === 'image' && (
-                                    <img src={item.mediaData.filePath} alt="" className="w-full h-auto block" />
-                                  )}
-                                  {item.type === 'video' && (
-                                    <video src={item.mediaData.filePath} className="w-full h-auto block" />
-                                  )}
+                              {/* Collage Layout (Masonry-ish) */}
+                              {block.blockLayoutType === 'grid-collage' && (
+                                <div className="columns-2 gap-2 space-y-2">
+                                  {block.mediaItems.map((item) => (
+                                    <div key={item.mediaId} className="break-inside-avoid rounded-lg overflow-hidden shadow-sm bg-white mb-2">
+                                      {item.type === 'image' && (
+                                        <img src={item.mediaData.filePath} alt="" className="w-full h-auto block" />
+                                      )}
+                                      {item.type === 'video' && (
+                                        <video src={item.mediaData.filePath} className="w-full h-auto block" />
+                                      )}
+                                    </div>
+                                  ))}
                                 </div>
-                              ))}
-                            </div>
+                              )}
+                            </>
                           )}
                         </>
                       )}

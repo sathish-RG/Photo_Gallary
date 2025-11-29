@@ -9,6 +9,7 @@ import { uploadFileToCloudinary } from '../utils/cloudinaryStorage';
 import ConfirmationModal from '../components/ConfirmationModal';
 import ImagePreviewModal from '../components/ImagePreviewModal';
 import GiftCardManager from '../components/GiftCardManager';
+import PhotographerSettings from '../components/PhotographerSettings';
 
 /**
  * FolderDetails Component
@@ -32,9 +33,14 @@ const FolderDetails = () => {
   // Active tab for filtering media types
   const [activeTab, setActiveTab] = useState('all'); // 'all', 'photos', 'videos', 'audio'
 
+  // Settings modal state
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+  const [folderSettings, setFolderSettings] = useState(null);
+
   useEffect(() => {
     fetchFolderDetails();
     fetchMedia();
+    fetchFolderSettings();
   }, [folderId]);
 
   const fetchFolderDetails = async () => {
@@ -64,6 +70,29 @@ const FolderDetails = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchFolderSettings = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:5000/api/folders/${folderId}/settings`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      if (data.success) {
+        setFolderSettings(data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching folder settings:', error);
+    }
+  };
+
+  const handleSettingsUpdate = (newSettings) => {
+    setFolderSettings(newSettings);
+    // Refresh media to apply new watermark settings
+    fetchMedia();
   };
 
   /**
@@ -288,17 +317,34 @@ const FolderDetails = () => {
             <p className="text-gray-600 text-lg">Upload and manage your media files</p>
 
             {/* Create Gift Card Button */}
-            <Link
-              to={`/gallery/${folderId}/select-template`}
-              className="inline-block mt-4 px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg transform hover:scale-105"
-            >
-              <span className="flex items-center gap-2">
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
-                </svg>
-                🎁 Create Gift Card
-              </span>
-            </Link>
+            <div className="flex gap-3 mt-4">
+              <Link
+                to={`/gallery/${folderId}/select-template`}
+                className="inline-block px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg transform hover:scale-105"
+              >
+                <span className="flex items-center gap-2">
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                  </svg>
+                  🎁 Create Gift Card
+                </span>
+              </Link>
+
+              {/* Photographer Settings Button */}
+              <button
+                onClick={() => setSettingsModalOpen(true)}
+                className="inline-block px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-cyan-600 transition-all shadow-lg transform hover:scale-105"
+                title="Photographer Settings"
+              >
+                <span className="flex items-center gap-2">
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  ⚙️ Settings
+                </span>
+              </button>
+            </div>
           </div>
 
           {/* View Toggle */}
@@ -534,6 +580,15 @@ const FolderDetails = () => {
         message="Are you sure you want to delete this media? This action cannot be undone."
         confirmText="Delete"
         isDangerous={true}
+      />
+
+      {/* Photographer Settings Modal */}
+      <PhotographerSettings
+        isOpen={settingsModalOpen}
+        onClose={() => setSettingsModalOpen(false)}
+        folderId={folderId}
+        currentSettings={folderSettings}
+        onUpdate={handleSettingsUpdate}
       />
     </div>
   );

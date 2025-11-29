@@ -5,6 +5,8 @@ const {
   getFolders,
   deleteFolder,
   verifyFolderPassword,
+  getFolderSettings,
+  updateFolderSettings,
 } = require('../controllers/folderController');
 
 const router = express.Router();
@@ -19,5 +21,9 @@ router.route('/:id')
 
 router.route('/:id/verify')
   .post(protect, verifyFolderPassword); // POST /api/folders/:id/verify - Verify folder password
+
+router.route('/:id/settings')
+  .get(protect, getFolderSettings) // GET /api/folders/:id/settings - Get folder settings
+  .put(protect, updateFolderSettings); // PUT /api/folders/:id/settings - Update folder settings
 
 module.exports = router;

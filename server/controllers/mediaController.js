@@ -76,6 +76,8 @@ exports.uploadMedia = async (req, res) => {
 exports.getMedia = async (req, res) => {
   try {
     const { folderId } = req.query;
+    const { applyWatermarkToImages } = require('../utils/cloudinaryHelper');
+    const Folder = require('../models/Folder');
     
     // Build query - filter by user and optionally by folder
     const query = { user: req.user.id };
@@ -85,9 +87,21 @@ exports.getMedia = async (req, res) => {
     }
     
     // Fetch media
-    const media = await Media.find(query).sort({
+    let media = await Media.find(query).sort({
       createdAt: -1, // Sort by newest first
-    });
+    }).lean();
+
+    // If folderId is provided, apply watermark transformations
+    if (folderId) {
+      const folder = await Folder.findById(folderId);
+      if (folder) {
+        // Apply watermark transformations based on folder settings
+        media = applyWatermarkToImages(media, {
+          watermarkSettings: folder.watermarkSettings,
+          allowDownload: folder.allowDownload
+        });
+      }
+    }
 
     res.status(200).json({
       success: true,

@@ -32,6 +32,9 @@ const ControlSidebar = ({
   onSave,
   saving,
   isEditMode,
+  branding,
+  setBranding,
+  onUploadLogo,
 }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [openSection, setOpenSection] = useState('content'); // Default open content
@@ -342,6 +345,69 @@ const ControlSidebar = ({
                   )}
                 </div>
               )}
+            </div>
+          )}
+        </div>
+
+        {/* BRANDING Section */}
+        <div className="border border-gray-200 rounded-xl overflow-hidden">
+          <button
+            onClick={() => toggleSection('branding')}
+            className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-pink-50 to-rose-50 hover:from-pink-100 hover:to-rose-100 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-pink-400 to-rose-500 rounded-lg flex items-center justify-center">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+              </div>
+              <span className="font-semibold text-gray-800">White Label Branding</span>
+            </div>
+            <svg
+              className={`w-5 h-5 text-gray-600 transition-transform ${openSection === 'branding' ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          {openSection === 'branding' && (
+            <div className="p-4 space-y-4 bg-white">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Brand Name</label>
+                <input
+                  type="text"
+                  value={branding?.name || ''}
+                  onChange={(e) => setBranding({ ...branding, name: e.target.value })}
+                  placeholder="Your Brand Name"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-400 focus:border-transparent transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Brand Logo</label>
+                {branding?.logoUrl && (
+                  <div className="mb-2 relative group w-fit">
+                    <img src={branding.logoUrl} alt="Brand Logo" className="h-12 object-contain border border-gray-200 rounded p-1" />
+                    <button
+                      onClick={() => setBranding({ ...branding, logoUrl: '' })}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                  </div>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    if (e.target.files[0]) {
+                      onUploadLogo(e.target.files[0]);
+                    }
+                  }}
+                  className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100"
+                />
+              </div>
             </div>
           )}
         </div>

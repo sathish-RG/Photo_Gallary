@@ -27,6 +27,37 @@ const folderSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  // Watermark settings for album protection
+  watermarkSettings: {
+    enabled: {
+      type: Boolean,
+      default: false,
+    },
+    text: {
+      type: String,
+      default: 'COPYRIGHT',
+    },
+    opacity: {
+      type: Number,
+      default: 50,
+      min: 0,
+      max: 100,
+    },
+    position: {
+      type: String,
+      default: 'center',
+      enum: ['center', 'north', 'south', 'east', 'west', 'north_east', 'north_west', 'south_east', 'south_west'],
+    },
+    fontSize: {
+      type: Number,
+      default: 80,
+    },
+  },
+  // Download control - if false, only watermarked images are served
+  allowDownload: {
+    type: Boolean,
+    default: false,
+  },
   // Timestamp when folder was created
   createdAt: {
     type: Date,

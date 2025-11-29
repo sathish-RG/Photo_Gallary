@@ -4,7 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Confetti from 'react-confetti';
 import { toast } from 'react-toastify';
 import html2canvas from 'html2canvas';
-import { getGiftCardBySlug, unlockGiftCard } from '../api/giftCardApi';
+import { getGiftCardBySlug, unlockGiftCard, downloadGiftCardZip } from '../api/giftCardApi';
+import SlotBasedLayout from '../components/SlotBasedLayout';
 
 /**
  * GiftCardViewer Component
@@ -26,7 +27,15 @@ const GiftCardViewer = () => {
 
   // Download state
   const [downloadingImage, setDownloadingImage] = useState(false);
+  const [downloadingZip, setDownloadingZip] = useState(false);
   const giftCardRef = useRef(null);
+
+  // Photo gallery state
+  const [likes, setLikes] = useState(() => {
+    const saved = localStorage.getItem(`giftcard-${slug}-likes`);
+    return saved ? JSON.parse(saved) : {};
+  });
+  const [allowDownload, setAllowDownload] = useState(false);
 
   useEffect(() => {
     // Set window size after component mounts (client-side only)
@@ -55,6 +64,7 @@ const GiftCardViewer = () => {
       const response = await getGiftCardBySlug(slug);
       const data = response.data.data;
       setGiftCard(data);
+      setAllowDownload(data.allowDownload || false);
 
       if (data.isProtected) {
         setIsLocked(true);
@@ -74,7 +84,9 @@ const GiftCardViewer = () => {
     try {
       setUnlocking(true);
       const response = await unlockGiftCard(slug, passwordInput);
-      setGiftCard(response.data.data);
+      const data = response.data.data;
+      setGiftCard(data);
+      setAllowDownload(data.allowDownload || false);
       setIsLocked(false);
       setShowConfetti(true); // Restart confetti on unlock
 
@@ -132,6 +144,43 @@ const GiftCardViewer = () => {
     } finally {
       setDownloadingImage(false);
     }
+  };
+
+  const handleDownloadZip = async () => {
+    if (downloadingZip) return;
+
+    try {
+      setDownloadingZip(true);
+      toast.info('Preparing ZIP download... This may take a while.');
+
+      const response = await downloadGiftCardZip(slug, passwordInput);
+
+      // Create blob from response data
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${giftCard.title || 'gift-card'}-photos.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success('ZIP downloaded successfully!');
+    } catch (error) {
+      console.error('Error downloading ZIP:', error);
+      toast.error(error.response?.data?.error || 'Failed to download ZIP');
+    } finally {
+      setDownloadingZip(false);
+    }
+  };
+
+  // Like handler
+  const handleLike = (photoId) => {
+    setLikes(prev => {
+      const newLikes = { ...prev, [photoId]: !prev[photoId] };
+      localStorage.setItem(`giftcard-${slug}-likes`, JSON.stringify(newLikes));
+      return newLikes;
+    });
   };
 
   if (loading) {
@@ -250,28 +299,68 @@ const GiftCardViewer = () => {
         />
       )}
 
-      {/* Download Button */}
-      <button
-        onClick={handleDownloadImage}
-        disabled={downloadingImage}
-        className="fixed top-6 right-6 z-50 bg-white/90 hover:bg-white backdrop-blur-lg text-gray-800 p-4 rounded-full shadow-2xl transition-all transform hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed border-2"
-        style={{ borderColor: `${themeColor}40` }}
-        title="Download as Image"
-      >
-        {downloadingImage ? (
-          <svg className="animate-spin h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-        ) : (
-          <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-          </svg>
+      {/* Action Buttons */}
+      <div className="fixed top-6 right-6 z-50 flex gap-4">
+        {/* Download ZIP Button */}
+        {allowDownload && (
+          <button
+            onClick={handleDownloadZip}
+            disabled={downloadingZip}
+            className="bg-white/90 hover:bg-white backdrop-blur-lg text-gray-800 p-4 rounded-full shadow-2xl transition-all transform hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed border-2"
+            style={{ borderColor: `${themeColor}40` }}
+            title="Download All Photos"
+          >
+            {downloadingZip ? (
+              <svg className="animate-spin h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            ) : (
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+            )}
+          </button>
         )}
-      </button>
+
+        {/* Download Image Button */}
+        <button
+          onClick={handleDownloadImage}
+          disabled={downloadingImage}
+          className="bg-white/90 hover:bg-white backdrop-blur-lg text-gray-800 p-4 rounded-full shadow-2xl transition-all transform hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed border-2"
+          style={{ borderColor: `${themeColor}40` }}
+          title="Download as Image"
+        >
+          {downloadingImage ? (
+            <svg className="animate-spin h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          ) : (
+            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          )}
+        </button>
+      </div>
 
       {/* Content Container */}
       <div ref={giftCardRef} className="relative z-10 max-w-5xl mx-auto p-6 sm:p-8 md:p-12">
+        {/* Branding Header */}
+        {giftCard.branding && (giftCard.branding.name || giftCard.branding.logoUrl) && (
+          <div className="flex items-center gap-3 mb-8">
+            {giftCard.branding.logoUrl && (
+              <img src={giftCard.branding.logoUrl} alt={giftCard.branding.name} className="h-12 object-contain drop-shadow-md" />
+            )}
+            {giftCard.branding.name && (
+              <p className="text-lg font-semibold uppercase tracking-wider text-white/90 drop-shadow-md">
+                {giftCard.branding.name}
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -30 }}
@@ -322,37 +411,49 @@ const GiftCardViewer = () => {
             <div key={block.blockId} className="w-full">
               {block.mediaItems && block.mediaItems.length > 0 && (
                 <>
-                  {/* Slideshow Layout */}
-                  {block.blockLayoutType === 'slideshow' && (
-                    <Slideshow mediaItems={block.mediaItems} />
-                  )}
+                  {/* Slot-Based Layout (Admin-designed custom layout) */}
+                  {giftCard.template?.layoutSlots && giftCard.template.layoutSlots.length > 0 ? (
+                    <SlotBasedLayout
+                      layoutSlots={giftCard.template.layoutSlots}
+                      mediaItems={block.mediaItems}
+                      themeColor={themeColor}
+                      baseHeight={giftCard.template.layoutConfig?.canvasHeight || 600}
+                    />
+                  ) : (
+                    <>
+                      {/* Slideshow Layout */}
+                      {block.blockLayoutType === 'slideshow' && (
+                        <Slideshow mediaItems={block.mediaItems} />
+                      )}
 
-                  {/* Grid Standard Layout */}
-                  {block.blockLayoutType === 'grid-standard' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {block.mediaItems.map((item) => (
-                        <MediaGridItem
-                          key={item.mediaId._id}
-                          item={item}
-                          themeColor={themeColor}
-                          layoutType="standard"
-                        />
-                      ))}
-                    </div>
-                  )}
+                      {/* Grid Standard Layout */}
+                      {block.blockLayoutType === 'grid-standard' && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          {block.mediaItems.map((item, index) => (
+                            <MediaGridItem
+                              key={item._id || `item-${index}`}
+                              item={item}
+                              themeColor={themeColor}
+                              layoutType="standard"
+                            />
+                          ))}
+                        </div>
+                      )}
 
-                  {/* Collage Layout */}
-                  {block.blockLayoutType === 'grid-collage' && (
-                    <div className="columns-1 md:columns-2 gap-6 space-y-6">
-                      {block.mediaItems.map((item) => (
-                        <MediaGridItem
-                          key={item.mediaId._id}
-                          item={item}
-                          themeColor={themeColor}
-                          layoutType="collage"
-                        />
-                      ))}
-                    </div>
+                      {/* Collage Layout */}
+                      {block.blockLayoutType === 'grid-collage' && (
+                        <div className="columns-1 md:columns-2 gap-6 space-y-6">
+                          {block.mediaItems.map((item, index) => (
+                            <MediaGridItem
+                              key={item._id || `item-${index}`}
+                              item={item}
+                              themeColor={themeColor}
+                              layoutType="collage"
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </>
                   )}
                 </>
               )}
@@ -539,6 +640,114 @@ const MediaGridItem = ({ item, themeColor, layoutType }) => {
       {media.caption && (item.type === 'image' || item.type === 'video') && (
         <div className="p-4 bg-white">
           <p className="text-gray-700 font-medium">{media.caption}</p>
+        </div>
+      )}
+    </motion.div>
+  );
+};
+
+/**
+ * PhotoCard Component - Individual photo with like/download buttons
+ */
+const PhotoCard = ({ media, photoId, isLiked, onLike, allowDownload, themeColor }) => {
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    if (!allowDownload || downloading) return;
+
+    try {
+      setDownloading(true);
+      const response = await fetch(media.filePath);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `photo-${photoId}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success('Photo downloaded!');
+    } catch (error) {
+      console.error('Download error:', error);
+      toast.error('Failed to download photo');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      whileInView={{ opacity: 1, scale: 1 }}
+      viewport={{ once: true }}
+      className="relative group bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all"
+    >
+      <img
+        src={media.filePath}
+        alt={media.caption || 'Photo'}
+        className="w-full h-64 object-cover"
+      />
+
+      {/* Overlay with buttons */}
+      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center gap-4 opacity-0 group-hover:opacity-100">
+        {/* Like Button */}
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => onLike(photoId)}
+          className={`p-4 rounded-full backdrop-blur-lg transition-all ${isLiked
+            ? 'bg-red-500 text-white'
+            : 'bg-white/90 text-gray-700 hover:bg-white'
+            }`}
+        >
+          <svg className="w-6 h-6" fill={isLiked ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+          </svg>
+        </motion.button>
+
+        {/* Download Button (conditional) */}
+        {allowDownload && (
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={handleDownload}
+            disabled={downloading}
+            className="p-4 bg-white/90 hover:bg-white text-gray-700 rounded-full backdrop-blur-lg transition-all disabled:opacity-50"
+          >
+            {downloading ? (
+              <svg className="animate-spin h-6 w-6" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+            ) : (
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+            )}
+          </motion.button>
+        )}
+      </div>
+
+      {/* Like indicator */}
+      {isLiked && (
+        <div className="absolute top-4 right-4">
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            className="bg-red-500 text-white p-2 rounded-full shadow-lg"
+          >
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Caption */}
+      {media.caption && (
+        <div className="p-4 bg-white">
+          <p className="text-gray-700 font-medium text-sm">{media.caption}</p>
         </div>
       )}
     </motion.div>

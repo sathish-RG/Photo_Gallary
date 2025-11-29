@@ -51,6 +51,39 @@ const TemplateSchema = new mongoose.Schema({
     type: Object,
     required: [true, 'Please provide layout configuration']
   },
+  layoutSlots: [{
+    id: {
+      type: String,
+      required: true
+    },
+    type: {
+      type: String,
+      enum: ['image', 'text', 'video'],
+      default: 'image'
+    },
+    position: {
+      x: { type: Number, required: true },
+      y: { type: Number, required: true },
+      width: { type: Number, required: true },
+      height: { type: Number, required: true }
+    },
+    style: {
+      borderRadius: { type: String, default: '0px' },
+      border: { type: String, default: 'none' },
+      objectFit: { 
+        type: String, 
+        enum: ['cover', 'contain', 'fill', 'none'],
+        default: 'cover' 
+      },
+      filter: { type: String, default: 'none' }
+    },
+    constraints: {
+      aspectRatio: { type: String },
+      minWidth: { type: Number },
+      maxWidth: { type: Number }
+    },
+    label: { type: String }
+  }],
   createdBy: {
     type: mongoose.Schema.ObjectId,
     ref: 'User',

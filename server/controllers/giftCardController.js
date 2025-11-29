@@ -10,59 +10,39 @@ const bcrypt = require('bcryptjs');
  */
 exports.createGiftCard = async (req, res) => {
   try {
-    const { title, message, themeColor, mediaContent, albumId, password } = req.body;
+    const { title, message, themeColor, mediaContent, albumId, password, templateId, branding } = req.body;
 
     // Validate required fields
-    if (!title || !message) {
+    if (!title || !message || !mediaContent || !albumId) {
       return res.status(400).json({
         success: false,
-        error: 'Please provide both title and message',
+        error: 'Please provide title, message, mediaContent, and albumId',
       });
     }
 
-    if (!albumId) {
+    // Validate mediaContent structure
+    if (!Array.isArray(mediaContent) || mediaContent.length === 0) {
       return res.status(400).json({
         success: false,
-        error: 'Please provide album ID',
+        error: 'mediaContent must be a non-empty array',
       });
     }
 
-    // Validate media content
-    if (!mediaContent || !Array.isArray(mediaContent) || mediaContent.length === 0) {
-      return res.status(400).json({
-        success: false,
-        error: 'Please select at least one media item',
-      });
-    }
-
-    // Verify all media items exist and belong to the user
-    // Extract all media IDs from all blocks
+    // Validate all media items exist
     const allMediaIds = mediaContent.flatMap(block => 
       block.mediaItems.map(item => item.mediaId)
     );
-    
-    // Deduplicate IDs for verification
-    const uniqueMediaIds = [...new Set(allMediaIds)];
 
-    const mediaItems = await Media.find({
-      _id: { $in: uniqueMediaIds },
-      user: req.user._id,
-    });
+    const mediaItems = await Media.find({ _id: { $in: allMediaIds } });
 
-    if (mediaItems.length !== uniqueMediaIds.length) {
-      console.error('Media verification failed:', {
-        found: mediaItems.length,
-        expected: uniqueMediaIds.length,
-        foundIds: mediaItems.map(m => m._id.toString()),
-        requestedIds: uniqueMediaIds
-      });
-      return res.status(404).json({
+    if (mediaItems.length !== allMediaIds.length) {
+      return res.status(400).json({
         success: false,
-        error: 'One or more media items not found or do not belong to you',
+        error: 'One or more media items not found',
       });
     }
 
-    // Generate unique slug (10 characters, URL-safe)
+    // Generate unique slug
     const uniqueSlug = nanoid(10);
 
     // Prepare gift card data
@@ -82,6 +62,8 @@ exports.createGiftCard = async (req, res) => {
           type: item.type
         }))
       })),
+      template: templateId || undefined,
+      branding: (branding && (branding.name || branding.logoUrl)) ? branding : undefined,
     };
 
     // Handle password protection
@@ -101,6 +83,9 @@ exports.createGiftCard = async (req, res) => {
     });
   } catch (error) {
     console.error('Error creating gift card:', error);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    console.error('Request body:', JSON.stringify(req.body, null, 2));
     
     // Handle duplicate slug (very unlikely with nanoid)
     if (error.code === 11000) {
@@ -125,10 +110,13 @@ exports.createGiftCard = async (req, res) => {
 exports.getGiftCardBySlug = async (req, res) => {
   try {
     const { slug } = req.params;
+    const Folder = require('../models/Folder');
+    const { applyWatermarkToImages } = require('../utils/cloudinaryHelper');
 
     // Find gift card
     const giftCard = await GiftCard.findOne({ uniqueSlug: slug })
-      .populate('sender', 'username');
+      .populate('sender', 'username')
+      .populate('template');
 
     if (!giftCard) {
       return res.status(404).json({
@@ -162,9 +150,56 @@ exports.getGiftCardBySlug = async (req, res) => {
       }
     }
 
+    // Fetch folder settings to apply watermarks
+    let folderSettings = null;
+    let allowDownload = false;
+    
+    // Convert to plain object first to allow modification
+    const giftCardObj = giftCard.toObject();
+
+    if (giftCard.albumId) {
+      try {
+        const folder = await Folder.findById(giftCard.albumId);
+        if (folder) {
+          folderSettings = {
+            watermarkSettings: folder.watermarkSettings,
+            allowDownload: folder.allowDownload
+          };
+          allowDownload = folder.allowDownload;
+
+          // Apply watermarks to all media items in gift card
+          if (giftCardObj.mediaContent && giftCardObj.mediaContent.length > 0) {
+            giftCardObj.mediaContent.forEach(block => {
+              if (block.mediaItems && block.mediaItems.length > 0) {
+                // Extract media objects from the structure
+                const mediaObjects = block.mediaItems.map(item => item.mediaId);
+                
+                // Apply watermarks
+                const watermarkedMediaObjects = applyWatermarkToImages(
+                  mediaObjects,
+                  folderSettings
+                );
+                
+                // Reconstruct the mediaItems array with watermarked media
+                block.mediaItems = block.mediaItems.map((item, index) => ({
+                  ...item,
+                  mediaId: watermarkedMediaObjects[index]
+                }));
+              }
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching folder settings:', err);
+      }
+    }
+
     res.status(200).json({
       success: true,
-      data: giftCard,
+      data: {
+        ...giftCardObj,
+        allowDownload, // Include download permission flag
+      },
     });
   } catch (error) {
     console.error('Error fetching gift card:', error);
@@ -184,6 +219,8 @@ exports.unlockGiftCard = async (req, res) => {
   try {
     const { slug } = req.params;
     const { password } = req.body;
+    const Folder = require('../models/Folder');
+    const { applyWatermarkToImages } = require('../utils/cloudinaryHelper');
 
     if (!password) {
       return res.status(400).json({
@@ -206,6 +243,7 @@ exports.unlockGiftCard = async (req, res) => {
       // If not protected, just return the data (populate media first)
       await giftCard.populate('sender', 'username');
       await giftCard.populate('mediaContent.mediaItems.mediaId');
+      await giftCard.populate('template');
       
       return res.status(200).json({
         success: true,
@@ -225,6 +263,7 @@ exports.unlockGiftCard = async (req, res) => {
 
     // Password correct, return full data
     await giftCard.populate('sender', 'username');
+    await giftCard.populate('template');
     
     if (giftCard.mediaContent && giftCard.mediaContent.length > 0) {
       try {
@@ -234,12 +273,59 @@ exports.unlockGiftCard = async (req, res) => {
       }
     }
 
+    // Fetch folder settings and apply watermarks
+    let folderSettings = null;
+    let allowDownload = false;
+    
+    // Convert to plain object first
+    const giftCardObj = giftCard.toObject();
+    
+    if (giftCard.albumId) {
+      try {
+        const folder = await Folder.findById(giftCard.albumId);
+        if (folder) {
+          folderSettings = {
+            watermarkSettings: folder.watermarkSettings,
+            allowDownload: folder.allowDownload
+          };
+          allowDownload = folder.allowDownload;
+
+          // Apply watermarks to all media items
+          if (giftCardObj.mediaContent && giftCardObj.mediaContent.length > 0) {
+            giftCardObj.mediaContent.forEach(block => {
+              if (block.mediaItems && block.mediaItems.length > 0) {
+                // Extract media objects
+                const mediaObjects = block.mediaItems.map(item => item.mediaId);
+                
+                // Apply watermarks
+                const watermarkedMediaObjects = applyWatermarkToImages(
+                  mediaObjects,
+                  folderSettings
+                );
+                
+                // Reconstruct
+                block.mediaItems = block.mediaItems.map((item, index) => ({
+                  ...item,
+                  mediaId: watermarkedMediaObjects[index]
+                }));
+              }
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching folder settings:', err);
+      }
+    }
+
     // Remove password from response
-    giftCard.password = undefined;
+    giftCardObj.password = undefined;
 
     res.status(200).json({
       success: true,
-      data: giftCard,
+      data: {
+        ...giftCardObj,
+        allowDownload,
+      },
     });
 
   } catch (error) {
@@ -290,9 +376,9 @@ exports.getAlbumGiftCards = async (req, res) => {
 exports.updateGiftCard = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, message, themeColor, mediaContent, password } = req.body;
+    const { title, message, themeColor, mediaContent, password, templateId, branding } = req.body;
 
-    // Find gift card
+    // Find gift card and verify ownership
     const giftCard = await GiftCard.findById(id);
 
     if (!giftCard) {
@@ -310,33 +396,23 @@ exports.updateGiftCard = async (req, res) => {
       });
     }
 
-    // If media content is being updated, verify all media items
+    // Update mediaContent if provided
     if (mediaContent && Array.isArray(mediaContent)) {
+      // Validate all media items exist
       const allMediaIds = mediaContent.flatMap(block => 
         block.mediaItems.map(item => item.mediaId)
       );
-      
-      // Deduplicate IDs for verification
-      const uniqueMediaIds = [...new Set(allMediaIds)];
 
-      const mediaItems = await Media.find({
-        _id: { $in: uniqueMediaIds },
-        user: req.user._id,
-      });
+      const mediaItems = await Media.find({ _id: { $in: allMediaIds } });
 
-      if (mediaItems.length !== uniqueMediaIds.length) {
-        console.error('Media verification failed:', {
-          found: mediaItems.length,
-          expected: uniqueMediaIds.length,
-          foundIds: mediaItems.map(m => m._id.toString()),
-          requestedIds: uniqueMediaIds
-        });
-        return res.status(404).json({
+      if (mediaItems.length !== allMediaIds.length) {
+        return res.status(400).json({
           success: false,
-          error: 'One or more media items not found or do not belong to you',
+          error: 'One or more media items not found',
         });
       }
 
+      // Update mediaContent with proper structure
       giftCard.mediaContent = mediaContent.map((block, index) => ({
         blockId: block.blockId,
         blockLayoutType: block.blockLayoutType,
@@ -352,6 +428,8 @@ exports.updateGiftCard = async (req, res) => {
     if (title) giftCard.title = title;
     if (message) giftCard.message = message;
     if (themeColor) giftCard.themeColor = themeColor;
+    if (templateId) giftCard.template = templateId;
+    if (branding && (branding.name || branding.logoUrl)) giftCard.branding = branding;
 
     // Update password if provided
     if (password !== undefined) {
@@ -379,6 +457,9 @@ exports.updateGiftCard = async (req, res) => {
     });
   } catch (error) {
     console.error('Error updating gift card:', error);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    console.error('Request body:', JSON.stringify(req.body, null, 2));
     res.status(500).json({
       success: false,
       error: error.message || 'Failed to update gift card',
@@ -427,5 +508,125 @@ exports.deleteGiftCard = async (req, res) => {
       success: false,
       error: 'Failed to delete gift card',
     });
+  }
+};
+
+/**
+ * @desc    Download all photos as ZIP
+ * @route   POST /api/gift-cards/download-zip/:slug
+ * @access  Public (with password if protected)
+ */
+exports.downloadGiftCardPhotos = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const { password } = req.body;
+    const Folder = require('../models/Folder');
+    const archiver = require('archiver');
+    const https = require('https');
+    const http = require('http');
+
+    // Find gift card
+    const giftCard = await GiftCard.findOne({ uniqueSlug: slug }).select('+password');
+
+    if (!giftCard) {
+      return res.status(404).json({ success: false, error: 'Gift card not found' });
+    }
+
+    // Check protection
+    if (giftCard.isProtected) {
+      if (!password) {
+        return res.status(401).json({ success: false, error: 'Password required' });
+      }
+      const isMatch = await bcrypt.compare(password, giftCard.password);
+      if (!isMatch) {
+        return res.status(401).json({ success: false, error: 'Incorrect password' });
+      }
+    }
+
+    // Check download permission
+    let allowDownload = false;
+    if (giftCard.albumId) {
+      const folder = await Folder.findById(giftCard.albumId);
+      if (folder) {
+        allowDownload = folder.allowDownload;
+      }
+    }
+
+    if (!allowDownload) {
+      return res.status(403).json({ success: false, error: 'Download not allowed for this gift card' });
+    }
+
+    // Populate media
+    await giftCard.populate('mediaContent.mediaItems.mediaId');
+
+    // Collect all media URLs
+    const mediaUrls = [];
+    if (giftCard.mediaContent) {
+      giftCard.mediaContent.forEach(block => {
+        if (block.mediaItems) {
+          block.mediaItems.forEach(item => {
+            if (item.mediaId && item.mediaId.filePath) {
+              mediaUrls.push({
+                url: item.mediaId.filePath,
+                name: `photo-${item.mediaId._id}.jpg` // Simplified naming
+              });
+            }
+          });
+        }
+      });
+    }
+
+    if (mediaUrls.length === 0) {
+      return res.status(400).json({ success: false, error: 'No photos to download' });
+    }
+
+    console.log(`Starting ZIP download for ${mediaUrls.length} files`);
+
+    // Create ZIP
+    const archive = archiver('zip', {
+      zlib: { level: 9 }
+    });
+
+    archive.on('error', function(err) {
+      console.error('Archiver error:', err);
+      if (!res.headersSent) {
+        res.status(500).json({ success: false, error: 'Archiver error: ' + err.message });
+      }
+    });
+
+    res.attachment(`${giftCard.title || 'gift-card'}-photos.zip`);
+
+    archive.pipe(res);
+
+    // Append files
+    for (const media of mediaUrls) {
+      await new Promise((resolve, reject) => {
+        const protocol = media.url.startsWith('https') ? https : http;
+        
+        protocol.get(media.url, (response) => {
+          if (response.statusCode !== 200) {
+            console.error(`Failed to fetch ${media.url}: ${response.statusCode}`);
+            // Continue even if one fails, or reject? 
+            // Let's log and continue to avoid failing the whole zip for one missing file
+            // But archiver expects a stream. If we don't append, we just resolve.
+            resolve(); 
+            return;
+          }
+          archive.append(response, { name: media.name });
+          resolve();
+        }).on('error', (err) => {
+          console.error(`Error fetching ${media.url}:`, err);
+          resolve(); // Continue
+        });
+      });
+    }
+
+    await archive.finalize();
+
+  } catch (error) {
+    console.error('Download error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, error: error.message || 'Server error' });
+    }
   }
 };
