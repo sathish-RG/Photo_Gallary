@@ -33,22 +33,34 @@ const GiftCards = () => {
     }
   };
 
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const handleDeleteClick = (giftCard) => {
+    console.log('handleDeleteClick called for:', giftCard._id);
     setSelectedGiftCard(giftCard);
     setDeleteModalOpen(true);
   };
 
   const handleConfirmDelete = async () => {
-    if (!selectedGiftCard) return;
+    console.log('handleConfirmDelete called. selectedGiftCard:', selectedGiftCard);
+    if (!selectedGiftCard) {
+      console.warn('No selectedGiftCard in handleConfirmDelete');
+      return;
+    }
 
     try {
+      setIsDeleting(true);
+      console.log('Calling deleteGiftCard API...');
       await deleteGiftCard(selectedGiftCard._id);
+      console.log('deleteGiftCard API success');
       toast.success('Gift card deleted successfully!');
+      setDeleteModalOpen(false);
       fetchGiftCards();
     } catch (error) {
       console.error('Error deleting gift card:', error);
       toast.error(error.response?.data?.error || 'Failed to delete gift card');
     } finally {
+      setIsDeleting(false);
       setSelectedGiftCard(null);
     }
   };
@@ -129,6 +141,7 @@ const GiftCards = () => {
         message={`Are you sure you want to delete "${selectedGiftCard?.title}"? The public link will no longer work.`}
         confirmText="Delete"
         isDangerous={true}
+        isLoading={isDeleting}
       />
     </div>
   );
