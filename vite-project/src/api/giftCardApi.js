@@ -40,6 +40,19 @@ export const getAlbumGiftCards = async (albumId) => {
 };
 
 /**
+ * Get all gift cards for the current user
+ * @returns {Promise} API response with array of gift cards
+ */
+export const getUserGiftCards = async () => {
+  const token = localStorage.getItem('token');
+  return axios.get(`${API_URL}/gift-cards`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+};
+
+/**
  * Update an existing gift card
  * @param {string} id - Gift card ID
  * @param {Object} data - Updated gift card data

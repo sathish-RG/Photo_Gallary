@@ -1,22 +1,16 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
-import { FiGift, FiCopy, FiEdit2, FiTrash2, FiImage, FiVideo, FiMusic } from 'react-icons/fi';
-import { getAlbumGiftCards, deleteGiftCard } from '../api/giftCardApi';
+import { FiGift, FiCopy, FiEdit2, FiTrash2, FiMusic, FiPlus } from 'react-icons/fi';
+import { getUserGiftCards, deleteGiftCard } from '../api/giftCardApi';
 import ConfirmationModal from '../components/ConfirmationModal';
-import Button from './ui/Button';
-import Skeleton from './ui/Skeleton';
-import EmptyState from './ui/EmptyState';
+import Button from '../components/ui/Button';
+import Skeleton from '../components/ui/Skeleton';
+import EmptyState from '../components/ui/EmptyState';
 
-/**
- * GiftCardManager Component
- * Displays and manages all saved gift cards for a specific album
- */
-const GiftCardManager = () => {
-  const { folderId } = useParams();
+const GiftCards = () => {
   const navigate = useNavigate();
-
   const [giftCards, setGiftCards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -24,12 +18,12 @@ const GiftCardManager = () => {
 
   useEffect(() => {
     fetchGiftCards();
-  }, [folderId]);
+  }, []);
 
   const fetchGiftCards = async () => {
     try {
       setLoading(true);
-      const response = await getAlbumGiftCards(folderId);
+      const response = await getUserGiftCards();
       setGiftCards(response.data.data || []);
     } catch (error) {
       console.error('Error fetching gift cards:', error);
@@ -66,33 +60,50 @@ const GiftCardManager = () => {
   };
 
   const handleEdit = (giftCard) => {
-    // Navigate to edit page (will be implemented)
-    navigate(`/gallery/${folderId}/gift-card/${giftCard._id}/edit`);
+    if (giftCard.albumId) {
+      navigate(`/gallery/${giftCard.albumId}/gift-card/${giftCard._id}/edit`);
+    } else {
+      toast.error('Cannot edit this gift card: Album not found');
+    }
   };
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {[...Array(3)].map((_, i) => (
-          <Skeleton key={i} className="h-80 w-full rounded-2xl" />
-        ))}
+      <div className="p-6 max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <Skeleton className="h-10 w-48" />
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[...Array(6)].map((_, i) => (
+            <Skeleton key={i} className="h-80 w-full rounded-2xl" />
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-bold text-slate-800">
-          Saved Gift Cards ({giftCards.length})
-        </h2>
+    <div className="p-6 max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">My Gift Cards</h1>
+          <p className="text-slate-500 mt-1">Manage and share your digital gift cards</p>
+        </div>
+        <Button onClick={() => navigate('/gallery')} icon={FiPlus}>
+          Create New
+        </Button>
       </div>
 
       {giftCards.length === 0 ? (
         <EmptyState
           title="No Gift Cards Yet"
-          description="Create your first gift card to share special memories!"
+          description="Create your first gift card from one of your albums to share special memories!"
           icon={FiGift}
+          action={{
+            label: 'Go to Albums',
+            onClick: () => navigate('/gallery')
+          }}
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -110,7 +121,6 @@ const GiftCardManager = () => {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
       <ConfirmationModal
         isOpen={deleteModalOpen}
         onClose={() => setDeleteModalOpen(false)}
@@ -124,12 +134,7 @@ const GiftCardManager = () => {
   );
 };
 
-/**
- * GiftCardItem Component
- * Individual gift card display card
- */
 const GiftCardItem = ({ giftCard, onDelete, onCopyLink, onEdit }) => {
-  // Get first media item for thumbnail preview
   const firstMedia = giftCard.mediaContent?.[0]?.mediaId;
   const hasMedia = firstMedia && firstMedia.filePath;
 
@@ -140,7 +145,6 @@ const GiftCardItem = ({ giftCard, onDelete, onCopyLink, onEdit }) => {
       exit={{ opacity: 0, scale: 0.9 }}
       className="bg-white rounded-2xl shadow-sm overflow-hidden border border-slate-100 hover:shadow-md transition-all group"
     >
-      {/* Thumbnail Preview */}
       <div
         className="h-48 bg-slate-100 overflow-hidden relative"
         style={{
@@ -176,13 +180,11 @@ const GiftCardItem = ({ giftCard, onDelete, onCopyLink, onEdit }) => {
           </div>
         )}
 
-        {/* Media count badge */}
         <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm">
           {giftCard.mediaContent?.length || 0} items
         </div>
       </div>
 
-      {/* Card Content */}
       <div className="p-5">
         <h3 className="text-lg font-bold text-slate-800 mb-2 truncate" title={giftCard.title}>
           {giftCard.title}
@@ -193,12 +195,8 @@ const GiftCardItem = ({ giftCard, onDelete, onCopyLink, onEdit }) => {
 
         <div className="flex items-center justify-between text-xs text-slate-400 mb-6">
           <span>Created {new Date(giftCard.createdAt).toLocaleDateString()}</span>
-          {giftCard.updatedAt && giftCard.updatedAt !== giftCard.createdAt && (
-            <span>Edited {new Date(giftCard.updatedAt).toLocaleDateString()}</span>
-          )}
         </div>
 
-        {/* Action Buttons */}
         <div className="grid grid-cols-3 gap-2">
           <Button
             variant="secondary"
@@ -235,4 +233,4 @@ const GiftCardItem = ({ giftCard, onDelete, onCopyLink, onEdit }) => {
   );
 };
 
-export default GiftCardManager;
+export default GiftCards;

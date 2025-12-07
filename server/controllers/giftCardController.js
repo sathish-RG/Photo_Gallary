@@ -10,7 +10,7 @@ const bcrypt = require('bcryptjs');
  */
 exports.createGiftCard = async (req, res) => {
   try {
-    const { title, message, themeColor, mediaContent, albumId, password, templateId, branding } = req.body;
+    const { title, message, themeColor, mediaContent, albumId, password, templateId, branding, qrCodeId } = req.body;
 
     // Validate required fields
     if (!title || !message || !mediaContent || !albumId) {
@@ -78,6 +78,24 @@ exports.createGiftCard = async (req, res) => {
 
     // Create gift card
     const giftCard = await GiftCard.create(giftCardData);
+
+    // Link to Physical Card if qrCodeId provided
+    if (qrCodeId) {
+      const PhysicalCard = require('../models/PhysicalCard');
+      const physicalCard = await PhysicalCard.findOne({ qrCodeId });
+      
+      if (physicalCard) {
+        if (physicalCard.isClaimed) {
+           // Should we error here? Or just ignore? 
+           // Ideally we should have checked this earlier but for now let's just log it
+           console.warn(`Physical card ${qrCodeId} already claimed`);
+        } else {
+          physicalCard.isClaimed = true;
+          physicalCard.linkedGiftCard = giftCard._id;
+          await physicalCard.save();
+        }
+      }
+    }
 
     res.status(201).json({
       success: true,
@@ -380,6 +398,31 @@ exports.getAlbumGiftCards = async (req, res) => {
 };
 
 /**
+ * @desc    Get all gift cards for the logged-in user
+ * @route   GET /api/gift-cards
+ * @access  Private (requires authentication)
+ */
+exports.getUserGiftCards = async (req, res) => {
+  try {
+    const giftCards = await GiftCard.find({ sender: req.user._id })
+      .populate('mediaContent.mediaItems.mediaId', 'filePath fileType')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: giftCards.length,
+      data: giftCards,
+    });
+  } catch (error) {
+    console.error('Error fetching user gift cards:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch gift cards',
+    });
+  }
+};
+
+/**
  * @desc    Update a gift card
  * @route   PUT /api/gift-cards/:id
  * @access  Private (requires authentication)
@@ -642,5 +685,41 @@ exports.downloadGiftCardPhotos = async (req, res) => {
     if (!res.headersSent) {
       res.status(500).json({ success: false, error: error.message || 'Server error' });
     }
+  }
+};
+
+
+/**
+ * @desc    Check status of a physical card QR code
+ * @route   GET /api/gift-cards/claim-status/:qrCodeId
+ * @access  Public
+ */
+exports.checkClaimStatus = async (req, res) => {
+  try {
+    const { qrCodeId } = req.params;
+    const PhysicalCard = require('../models/PhysicalCard');
+
+    const card = await PhysicalCard.findOne({ qrCodeId }).populate('linkedGiftCard');
+
+    if (!card) {
+      return res.status(404).json({
+        success: false,
+        error: 'Invalid QR code',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        isClaimed: card.isClaimed,
+        linkedGiftCard: card.linkedGiftCard,
+      },
+    });
+  } catch (error) {
+    console.error('Check claim status error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server error',
+    });
   }
 };

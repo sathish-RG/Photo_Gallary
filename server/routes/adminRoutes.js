@@ -1,33 +1,16 @@
 const express = require('express');
 const router = express.Router();
-const { protect } = require('../middlewares/authMiddleware');
-const adminMiddleware = require('../middlewares/adminMiddleware');
-const {
-  getAllUsers,
-  updateUserStatus,
-  getUserContent,
-  deleteUserFile,
-} = require('../controllers/adminController');
-
-const { getAdminConfig, updateAdminConfig } = require('../controllers/adminConfigController');
+const { protect, admin } = require('../middlewares/authMiddleware');
+const { generateBatch, getConfig, updateConfig, getUsers, getUserContent } = require('../controllers/adminController');
 
 // All routes are protected and require admin privileges
 router.use(protect);
-router.use(adminMiddleware);
+router.use(admin);
 
-router.get('/users', getAllUsers);
-router.put('/users/:id/status', updateUserStatus);
-router.get('/reported', (req, res) => {
-  // Placeholder for reported content management
-  res.status(200).json({ success: true, data: [] });
-});
-
+router.post('/generate-batch', generateBatch);
+router.get('/config', getConfig);
+router.put('/config', updateConfig);
+router.get('/users', getUsers);
 router.get('/users/:id/content', getUserContent);
-router.delete('/users/:userId/files/:fileId', deleteUserFile);
-
-router
-  .route('/config')
-  .get(getAdminConfig)
-  .put(updateAdminConfig);
 
 module.exports = router;

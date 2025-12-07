@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { toast } from 'react-toastify';
+import { toast } from 'react-hot-toast';
 import { QRCodeSVG } from 'qrcode.react';
+import { FiCheck, FiCopy, FiArrowLeft } from 'react-icons/fi';
 import { getMedia } from '../api/mediaApi';
 import { createGiftCard, getAlbumGiftCards, updateGiftCard } from '../api/giftCardApi';
+import { getFolderSettings, updateFolderSettings } from '../api/folderApi';
 import { getTemplateById } from '../api/templateApi';
 import { uploadFileToCloudinary } from '../utils/cloudinaryStorage';
 import QRCodeGenerator from '../components/QRCodeGenerator';
 import ControlSidebar from '../components/ControlSidebar';
 import LivePreview from '../components/LivePreview';
+import Button from '../components/ui/Button';
 
 /**
  * GiftCardBuilder Component
@@ -20,6 +23,7 @@ const GiftCardBuilder = () => {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const urlTemplateId = searchParams.get('templateId');
+  const qrCodeId = searchParams.get('qrCodeId');
   const isEditMode = !!giftCardId;
 
   // State for template ID and Data
@@ -29,6 +33,19 @@ const GiftCardBuilder = () => {
   // Media from the album
   const [availableMedia, setAvailableMedia] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Folder Settings State
+  const [folderSettings, setFolderSettings] = useState({
+    watermarkSettings: {
+      enabled: false,
+      text: 'COPYRIGHT',
+      opacity: 50,
+      position: 'center',
+      fontSize: 80,
+    },
+    allowDownload: false,
+    allowClientSelection: false,
+  });
 
   // Selected media items
   // Content Blocks state
@@ -45,7 +62,7 @@ const GiftCardBuilder = () => {
   // Customization fields
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
-  const [themeColor, setThemeColor] = useState('#ec4899');
+  const [themeColor, setThemeColor] = useState('#4f46e5'); // Default primary color
   const [password, setPassword] = useState('');
   const [branding, setBranding] = useState({ name: '', logoUrl: '' });
 
@@ -53,6 +70,11 @@ const GiftCardBuilder = () => {
   const [giftCardUrl, setGiftCardUrl] = useState('');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed(!isSidebarCollapsed);
+  };
 
   useEffect(() => {
     const init = async () => {
@@ -63,7 +85,24 @@ const GiftCardBuilder = () => {
         const mediaList = mediaResponse.data;
         setAvailableMedia(mediaList);
 
-        // 2. If edit mode, fetch gift card details
+        // 2. Fetch Folder Settings
+        try {
+          const settingsResponse = await getFolderSettings(folderId);
+          if (settingsResponse.success) {
+            setFolderSettings(prev => ({
+              ...prev,
+              ...settingsResponse.data,
+              watermarkSettings: {
+                ...prev.watermarkSettings,
+                ...(settingsResponse.data.watermarkSettings || {})
+              }
+            }));
+          }
+        } catch (error) {
+          console.error('Error fetching folder settings:', error);
+        }
+
+        // 3. If edit mode, fetch gift card details
         if (isEditMode) {
           const cardsResponse = await getAlbumGiftCards(folderId);
           const card = cardsResponse.data.data.find(c => c._id === giftCardId);
@@ -136,7 +175,7 @@ const GiftCardBuilder = () => {
             navigate(`/gallery/${folderId}`);
           }
         } else if (selectedTemplateId) {
-          // 3. If template mode, fetch template details
+          // 4. If template mode, fetch template details
           try {
             const templateResponse = await getTemplateById(selectedTemplateId);
             const template = templateResponse.data.data;
@@ -165,6 +204,18 @@ const GiftCardBuilder = () => {
     init();
   }, [folderId, giftCardId, navigate, isEditMode, selectedTemplateId]);
 
+  const handleUpdateFolderSettings = async (newSettings) => {
+    try {
+      setFolderSettings(newSettings);
+      // Debounce or save immediately? Let's save immediately for now but maybe show a toast
+      await updateFolderSettings(folderId, newSettings);
+      toast.success('Album settings updated');
+    } catch (error) {
+      console.error('Error updating folder settings:', error);
+      toast.error('Failed to update album settings');
+    }
+  };
+
   // Toggle media selection
   // --- Block Management ---
 
@@ -181,7 +232,7 @@ const GiftCardBuilder = () => {
 
   const handleRemoveBlock = (blockId) => {
     if (contentBlocks.length <= 1) {
-      toast.warning('You must have at least one block');
+      toast.error('You must have at least one block');
       return;
     }
     setContentBlocks(prev => {
@@ -316,6 +367,10 @@ const GiftCardBuilder = () => {
         })),
       };
 
+      if (qrCodeId) {
+        payload.qrCodeId = qrCodeId;
+      }
+
       let response;
       if (isEditMode) {
         response = await updateGiftCard(giftCardId, payload);
@@ -342,18 +397,21 @@ const GiftCardBuilder = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-pink-100 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-pink-500"></div>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-primary"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-pink-100">
+    <div className="min-h-screen bg-slate-50">
       {/* Split Screen Layout */}
       <div className="flex flex-col lg:flex-row min-h-screen">
-        {/* Left: Control Sidebar (35% on desktop, 100% on mobile) */}
-        <div className="w-full lg:w-[35%] border-r border-gray-200 bg-white order-2 lg:order-1">
+        {/* Left: Control Sidebar */}
+        <div
+          className={`border-r border-slate-200 bg-white order-2 lg:order-1 transition-all duration-300 ease-in-out ${isSidebarCollapsed ? 'w-full lg:w-20' : 'w-full lg:w-[35%]'
+            }`}
+        >
           <ControlSidebar
             title={title}
             setTitle={setTitle}
@@ -380,11 +438,18 @@ const GiftCardBuilder = () => {
             branding={branding}
             setBranding={setBranding}
             onUploadLogo={handleLogoUpload}
+            folderSettings={folderSettings}
+            onUpdateFolderSettings={handleUpdateFolderSettings}
+            isCollapsed={isSidebarCollapsed}
+            onToggleCollapse={toggleSidebar}
           />
         </div>
 
-        {/* Right: Live Preview (65% on desktop, 100% on mobile) */}
-        <div className="w-full lg:w-[65%] order-1 lg:order-2 bg-gray-100 sticky top-0 z-10 lg:static h-[50vh] lg:h-auto">
+        {/* Right: Live Preview */}
+        <div
+          className={`order-1 lg:order-2 bg-slate-100 sticky top-0 z-10 lg:static h-[50vh] lg:h-auto overflow-hidden transition-all duration-300 ease-in-out ${isSidebarCollapsed ? 'w-full lg:w-[calc(100%-5rem)]' : 'w-full lg:w-[65%]'
+            }`}
+        >
           <LivePreview
             title={title}
             message={message}
@@ -399,17 +464,15 @@ const GiftCardBuilder = () => {
       {/* Success Modal */}
       {showSuccessModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl shadow-2xl p-6 sm:p-8 max-w-md w-full border border-pink-100 my-8 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl p-6 sm:p-8 max-w-md w-full border border-slate-100 my-8 max-h-[90vh] overflow-y-auto">
             <div className="text-center mb-4 sm:mb-6">
-              <div className="inline-block p-3 sm:p-4 bg-gradient-to-br from-pink-400 to-rose-500 rounded-full mb-3 sm:mb-4">
-                <svg className="h-12 w-12 sm:h-16 sm:w-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+              <div className="inline-block p-3 sm:p-4 bg-primary/10 rounded-full mb-3 sm:mb-4 text-primary">
+                <FiCheck className="h-12 w-12 sm:h-16 sm:w-16" />
               </div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">
+              <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-2">
                 🎉 Success!
               </h2>
-              <p className="text-gray-600 text-sm sm:text-base">
+              <p className="text-slate-600 text-sm sm:text-base">
                 Your gift card is ready to share
               </p>
             </div>
@@ -419,36 +482,39 @@ const GiftCardBuilder = () => {
 
             {/* URL Display */}
             <div className="mb-4 sm:mb-6">
-              <div className="flex items-center gap-2 bg-pink-50 p-3 rounded-xl border border-pink-200">
+              <div className="flex items-center gap-2 bg-slate-50 p-3 rounded-xl border border-slate-200">
                 <input
                   type="text"
                   value={giftCardUrl}
                   readOnly
-                  className="flex-1 bg-transparent text-gray-700 text-sm focus:outline-none"
+                  className="flex-1 bg-transparent text-slate-700 text-sm focus:outline-none"
                 />
-                <button
+                <Button
                   onClick={copyToClipboard}
-                  className="px-3 py-2 bg-gradient-to-r from-pink-500 to-rose-500 text-white text-sm font-semibold rounded-lg hover:from-pink-600 hover:to-rose-600 transition-all"
+                  size="sm"
+                  className="flex items-center gap-1"
                 >
+                  <FiCopy className="w-4 h-4" />
                   Copy
-                </button>
+                </Button>
               </div>
             </div>
 
             {/* Actions */}
             <div className="flex flex-col sm:flex-row gap-3">
-              <button
+              <Button
+                variant="secondary"
                 onClick={() => setShowSuccessModal(false)}
-                className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-all"
+                className="flex-1"
               >
                 Continue Editing
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => navigate(`/gallery/${folderId}`)}
-                className="flex-1 px-4 py-3 bg-gradient-to-r from-pink-500 to-rose-500 text-white font-semibold rounded-xl hover:from-pink-600 hover:to-rose-600 transition-all shadow-lg"
+                className="flex-1"
               >
                 Done
-              </button>
+              </Button>
             </div>
           </div>
         </div>

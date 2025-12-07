@@ -32,3 +32,11 @@ exports.protect = async (req, res, next) => {
     return res.status(401).json({ success: false, error: 'Not authorized to access this route' });
   }
 };
+
+exports.admin = (req, res, next) => {
+  if (req.user && req.user.isAdmin) {
+    next();
+  } else {
+    return res.status(403).json({ success: false, error: 'Not authorized as an admin' });
+  }
+};

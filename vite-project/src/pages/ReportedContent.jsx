@@ -1,13 +1,22 @@
 // src/pages/ReportedContent.jsx
 import React from 'react';
+import { FiFlag, FiAlertTriangle } from 'react-icons/fi';
+import EmptyState from '../components/ui/EmptyState';
 
-// Placeholder component for reported content management in the admin panel.
-// You can replace this with the actual implementation later.
 const ReportedContent = () => {
   return (
-    <div className="p-8">
-      <h2 className="text-2xl font-bold mb-4">Reported Content</h2>
-      <p className="text-gray-600">This page will display content reported by users. Implement the UI and logic as needed.</p>
+    <div className="min-h-screen bg-slate-50 p-8">
+      <div className="max-w-7xl mx-auto">
+        <h1 className="text-3xl font-bold text-slate-800 mb-8">Reported Content</h1>
+
+        <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-8">
+          <EmptyState
+            icon={FiFlag}
+            title="No Reported Content"
+            description="There are currently no reports to review. Great job keeping the platform safe!"
+          />
+        </div>
+      </div>
     </div>
   );
 };

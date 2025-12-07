@@ -1,172 +1,170 @@
-const User = require('../models/User');
-const Folder = require('../models/Folder');
-const Media = require('../models/Media');
+const PhysicalCard = require('../models/PhysicalCard');
+const QRCode = require('qrcode');
+const AdmZip = require('adm-zip');
+const { nanoid } = require('nanoid');
+
+/**
+ * @desc    Generate a batch of QR codes
+ * @route   POST /api/admin/generate-batch
+ * @access  Private (Admin only)
+ */
+exports.generateBatch = async (req, res) => {
+  try {
+    const { quantity, batchName } = req.body;
+
+    if (!quantity || !batchName) {
+      return res.status(400).json({
+        success: false,
+        error: 'Please provide quantity and batch name',
+      });
+    }
+
+    const numQuantity = parseInt(quantity);
+    if (isNaN(numQuantity) || numQuantity <= 0 || numQuantity > 1000) {
+      return res.status(400).json({
+        success: false,
+        error: 'Quantity must be a number between 1 and 1000',
+      });
+    }
+
+    const zip = new AdmZip();
+    const cards = [];
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+    // Generate cards
+    for (let i = 0; i < numQuantity; i++) {
+      const qrCodeId = nanoid(10); // Short unique ID
+      const claimUrl = `${frontendUrl}/claim/${qrCodeId}`;
+
+      // Create DB entry
+      cards.push({
+        qrCodeId,
+        batchName,
+        isClaimed: false,
+      });
+
+      // Generate QR Code image
+      const qrImage = await QRCode.toBuffer(claimUrl, {
+        errorCorrectionLevel: 'H',
+        margin: 1,
+        width: 300,
+        color: {
+          dark: '#000000',
+          light: '#ffffff',
+        },
+      });
+
+      // Add to ZIP
+      zip.addFile(`qr-${qrCodeId}.png`, qrImage);
+    }
+
+    // Save to DB in bulk
+    await PhysicalCard.insertMany(cards);
+
+    // Create ZIP buffer
+    const zipBuffer = zip.toBuffer();
+
+    // Send ZIP file
+    res.set('Content-Type', 'application/zip');
+    res.set('Content-Disposition', `attachment; filename=${batchName.replace(/\s+/g, '-')}-qrcodes.zip`);
+    res.set('Content-Length', zipBuffer.length);
+    res.send(zipBuffer);
+
+  } catch (error) {
+    console.error('Batch generation error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server error while generating batch',
+    });
+  }
+};
+
+/**
+ * @desc    Get dashboard configuration
+ * @route   GET /api/admin/config
+ * @access  Private/Admin
+ */
+exports.getConfig = async (req, res) => {
+  try {
+    // For now, we'll return a default config or mock data
+    // In a real app, this would come from a database model (e.g., SystemConfig)
+    const config = {
+      sidebarColor: '#1f2937',
+      navbarColor: '#ffffff',
+      fontFamily: 'Inter, sans-serif',
+      showSidebar: true
+    };
+    res.status(200).json({ success: true, data: config });
+  } catch (error) {
+    console.error('Get config error:', error);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+};
+
+/**
+ * @desc    Update dashboard configuration
+ * @route   PUT /api/admin/config
+ * @access  Private/Admin
+ */
+exports.updateConfig = async (req, res) => {
+  try {
+    const config = req.body;
+    // In a real app, save to DB
+    // console.log('Updating config:', config);
+    res.status(200).json({ success: true, data: config });
+  } catch (error) {
+    console.error('Update config error:', error);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+};
+
 
 /**
  * @desc    Get all users
  * @route   GET /api/admin/users
  * @access  Private/Admin
  */
-exports.getAllUsers = async (req, res) => {
+exports.getUsers = async (req, res) => {
   try {
-    const users = await User.find({}).select('-password').sort({ createdAt: -1 });
-    
-    // Optional: Add stats like total storage used or file count for each user
-    // This might be expensive for many users, so we'll keep it simple for now
-    // or do a separate aggregation if needed.
-
-    res.status(200).json({
-      success: true,
-      count: users.length,
-      data: users,
-    });
+    const User = require('../models/User');
+    const users = await User.find({}).select('-password').sort('-createdAt');
+    res.status(200).json({ success: true, data: users });
   } catch (error) {
-    console.error('Error fetching users:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch users',
-    });
+    console.error('Get users error:', error);
+    res.status(500).json({ success: false, error: 'Server error' });
   }
 };
 
 /**
- * @desc    Update user status (Ban/Unban)
- * @route   PUT /api/admin/users/:id/status
- * @access  Private/Admin
- */
-exports.updateUserStatus = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { isActive } = req.body;
-
-    console.log('Update user status request:', { id, isActive, adminUser: req.user?._id });
-
-    const user = await User.findById(id);
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: 'User not found',
-      });
-    }
-
-    // Prevent banning yourself
-    if (req.user && user._id.toString() === req.user._id.toString()) {
-      return res.status(400).json({
-        success: false,
-        error: 'You cannot ban yourself',
-      });
-    }
-
-    user.isActive = isActive;
-    await user.save();
-
-    res.status(200).json({
-      success: true,
-      data: user,
-      message: `User ${isActive ? 'activated' : 'banned'} successfully`,
-    });
-  } catch (error) {
-    console.error('Error updating user status:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to update user status',
-      details: error.message,
-    });
-  }
-};
-
-const mongoose = require('mongoose');
-
-/**
- * @desc    Get specific user's content (folders and media)
+ * @desc    Get user content (folders and media)
  * @route   GET /api/admin/users/:id/content
  * @access  Private/Admin
  */
 exports.getUserContent = async (req, res) => {
   try {
     const { id } = req.params;
+    const User = require('../models/User');
+    const Folder = require('../models/Folder');
+    const Media = require('../models/Media');
 
-    // Validate ObjectId
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid User ID format',
-      });
-    }
-
-    const user = await User.findById(id);
+    const user = await User.findById(id).select('-password');
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: 'User not found',
-      });
+      return res.status(404).json({ success: false, error: 'User not found' });
     }
 
-    const folders = await Folder.find({ user: id }).sort({ createdAt: -1 });
-    const media = await Media.find({ user: id }).sort({ createdAt: -1 });
+    const folders = await Folder.find({ user: id }).sort('-createdAt');
+    const media = await Media.find({ user: id }).sort('-createdAt');
 
     res.status(200).json({
       success: true,
       data: {
-        user: {
-          _id: user._id,
-          username: user.username,
-          email: user.email,
-        },
+        user,
         folders,
-        media,
-      },
+        media
+      }
     });
   } catch (error) {
-    console.error('Error fetching user content:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch user content',
-    });
-  }
-};
-
-/**
- * @desc    Delete user file
- * @route   DELETE /api/admin/users/:userId/files/:fileId
- * @access  Private/Admin
- */
-exports.deleteUserFile = async (req, res) => {
-  try {
-    const { userId, fileId } = req.params;
-
-    // Validate ObjectIds
-    if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(fileId)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid ID format',
-      });
-    }
-
-    const media = await Media.findOne({ _id: fileId, user: userId });
-
-    if (!media) {
-      return res.status(404).json({
-        success: false,
-        error: 'File not found',
-      });
-    }
-
-    // In a real app, we would also delete the file from storage (S3/Cloudinary/Local)
-    // For now, we just remove the database record
-    await Media.findByIdAndDelete(fileId);
-
-    res.status(200).json({
-      success: true,
-      message: 'File deleted successfully',
-      data: { fileId }
-    });
-  } catch (error) {
-    console.error('Error deleting user file:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to delete file',
-    });
+    console.error('Get user content error:', error);
+    res.status(500).json({ success: false, error: 'Server error' });
   }
 };

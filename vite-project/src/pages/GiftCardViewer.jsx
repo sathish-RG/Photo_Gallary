@@ -2,11 +2,13 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Confetti from 'react-confetti';
-import { toast } from 'react-toastify';
+import { toast } from 'react-hot-toast';
 import html2canvas from 'html2canvas';
+import { FiDownload, FiHeart, FiLock, FiCheck, FiSend, FiX, FiImage, FiMusic, FiVideo } from 'react-icons/fi';
 import { getGiftCardBySlug, unlockGiftCard, downloadGiftCardZip } from '../api/giftCardApi';
 import { createSelection } from '../api/selectionApi';
 import SlotBasedLayout from '../components/SlotBasedLayout';
+import Button from '../components/ui/Button';
 
 /**
  * GiftCardViewer Component
@@ -114,7 +116,7 @@ const GiftCardViewer = () => {
 
     try {
       setDownloadingImage(true);
-      toast.info('Generating image... This may take a few seconds.');
+      toast.loading('Generating image... This may take a few seconds.', { id: 'download-image' });
 
       // Use html2canvas to capture the gift card
       const canvas = await html2canvas(giftCardRef.current, {
@@ -142,10 +144,10 @@ const GiftCardViewer = () => {
       link.click();
       document.body.removeChild(link);
 
-      toast.success('Gift card downloaded successfully!');
+      toast.success('Gift card downloaded successfully!', { id: 'download-image' });
     } catch (error) {
       console.error('Error downloading image:', error);
-      toast.error('Failed to download image. Please try again.');
+      toast.error('Failed to download image. Please try again.', { id: 'download-image' });
     } finally {
       setDownloadingImage(false);
     }
@@ -156,7 +158,7 @@ const GiftCardViewer = () => {
 
     try {
       setDownloadingZip(true);
-      toast.info('Preparing ZIP download... This may take a while.');
+      toast.loading('Preparing ZIP download... This may take a while.', { id: 'download-zip' });
 
       const response = await downloadGiftCardZip(slug, passwordInput);
 
@@ -170,10 +172,10 @@ const GiftCardViewer = () => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      toast.success('ZIP downloaded successfully!');
+      toast.success('ZIP downloaded successfully!', { id: 'download-zip' });
     } catch (error) {
       console.error('Error downloading ZIP:', error);
-      toast.error(error.response?.data?.error || 'Failed to download ZIP');
+      toast.error(error.response?.data?.error || 'Failed to download ZIP', { id: 'download-zip' });
     } finally {
       setDownloadingZip(false);
     }
@@ -277,9 +279,7 @@ const GiftCardViewer = () => {
             className="inline-block p-6 rounded-full mb-6 shadow-lg"
             style={{ backgroundColor: `${themeColor}20` }}
           >
-            <svg className="h-16 w-16" fill="none" stroke={themeColor} viewBox="0 0 24 24" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
+            <FiLock className="h-16 w-16" style={{ color: themeColor }} />
           </div>
 
           <h2 className="text-3xl font-bold text-gray-800 mb-2">
@@ -301,24 +301,17 @@ const GiftCardViewer = () => {
               />
             </div>
 
-            <button
+            <Button
               type="submit"
               disabled={unlocking || !passwordInput}
-              className="w-full py-4 text-white font-bold text-lg rounded-2xl shadow-lg transform transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+              isLoading={unlocking}
+              className="w-full py-4 text-lg rounded-2xl shadow-lg"
               style={{
                 background: `linear-gradient(to right, ${themeColor}, ${themeColor}dd)`
               }}
             >
-              {unlocking ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Unlocking...
-                </span>
-              ) : 'Unlock Gift 🎁'}
-            </button>
+              Unlock Gift 🎁
+            </Button>
           </form>
         </motion.div>
       </div>
@@ -359,9 +352,7 @@ const GiftCardViewer = () => {
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
             ) : (
-              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
+              <FiDownload className="h-6 w-6" />
             )}
           </button>
         )}
@@ -380,10 +371,7 @@ const GiftCardViewer = () => {
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
           ) : (
-            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
+            <FiImage className="h-6 w-6" />
           )}
         </button>
       </div>
@@ -415,9 +403,7 @@ const GiftCardViewer = () => {
             className="inline-block p-6 rounded-full mb-6 shadow-2xl"
             style={{ backgroundColor: themeColor }}
           >
-            <svg className="h-16 w-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
-            </svg>
+            <FiCheck className="h-16 w-16 text-white" />
           </div>
 
           <motion.h1
@@ -552,9 +538,7 @@ const GiftCardViewer = () => {
               className="px-6 py-3 bg-gradient-to-r from-pink-500 to-rose-500 text-white font-semibold rounded-full hover:shadow-lg transition-all transform hover:scale-105 active:scale-95 flex items-center gap-2"
             >
               <span>Send to Photographer</span>
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-              </svg>
+              <FiSend className="w-5 h-5" />
             </button>
           </motion.div>
         )}
@@ -577,9 +561,7 @@ const GiftCardViewer = () => {
                     onClick={() => setShowSelectionModal(false)}
                     className="p-2 hover:bg-gray-100 rounded-full transition-colors"
                   >
-                    <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+                    <FiX className="w-6 h-6 text-gray-500" />
                   </button>
                 </div>
               </div>
@@ -625,23 +607,14 @@ const GiftCardViewer = () => {
                   />
                 </div>
 
-                <button
+                <Button
                   type="submit"
                   disabled={submittingSelection}
+                  isLoading={submittingSelection}
                   className="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  {submittingSelection ? (
-                    <>
-                      <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Sending...
-                    </>
-                  ) : (
-                    'Send Selection'
-                  )}
-                </button>
+                  Send Selection
+                </Button>
               </form>
             </motion.div>
           </div>
@@ -763,9 +736,7 @@ const MediaGridItem = ({ item, themeColor, layoutType, isSelected, onSelect, all
             }}
             className={`p-3 rounded-full shadow-lg transition-all transform hover:scale-110 ${isSelected ? 'bg-pink-500 text-white' : 'bg-white/80 text-gray-600 hover:bg-white opacity-0 group-hover:opacity-100'}`}
           >
-            <svg className="w-6 h-6" fill={isSelected ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-            </svg>
+            <FiHeart className={`w-6 h-6 ${isSelected ? 'fill-current' : ''}`} />
           </button>
         )}
       </div>
@@ -795,15 +766,7 @@ const MediaGridItem = ({ item, themeColor, layoutType, isSelected, onSelect, all
             className="rounded-2xl p-8 mb-4 flex items-center justify-center"
             style={{ backgroundColor: `${themeColor}20` }}
           >
-            <svg
-              className="h-20 w-20"
-              fill="none"
-              stroke={themeColor}
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-            </svg>
+            <FiMusic className="h-20 w-20" style={{ color: themeColor }} />
           </div>
 
           {media.caption && (
@@ -822,114 +785,6 @@ const MediaGridItem = ({ item, themeColor, layoutType, isSelected, onSelect, all
       {media.caption && (item.type === 'image' || item.type === 'video') && (
         <div className="p-4 bg-white">
           <p className="text-gray-700 font-medium">{media.caption}</p>
-        </div>
-      )}
-    </motion.div>
-  );
-};
-
-/**
- * PhotoCard Component - Individual photo with like/download buttons
- */
-const PhotoCard = ({ media, photoId, isLiked, onLike, allowDownload, themeColor }) => {
-  const [downloading, setDownloading] = useState(false);
-
-  const handleDownload = async () => {
-    if (!allowDownload || downloading) return;
-
-    try {
-      setDownloading(true);
-      const response = await fetch(media.filePath);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `photo-${photoId}.jpg`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      toast.success('Photo downloaded!');
-    } catch (error) {
-      console.error('Download error:', error);
-      toast.error('Failed to download photo');
-    } finally {
-      setDownloading(false);
-    }
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      whileInView={{ opacity: 1, scale: 1 }}
-      viewport={{ once: true }}
-      className="relative group bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all"
-    >
-      <img
-        src={media.filePath}
-        alt={media.caption || 'Photo'}
-        className="w-full h-64 object-cover"
-      />
-
-      {/* Overlay with buttons */}
-      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center gap-4 opacity-0 group-hover:opacity-100">
-        {/* Like Button */}
-        <motion.button
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          onClick={() => onLike(photoId)}
-          className={`p-4 rounded-full backdrop-blur-lg transition-all ${isLiked
-            ? 'bg-red-500 text-white'
-            : 'bg-white/90 text-gray-700 hover:bg-white'
-            }`}
-        >
-          <svg className="w-6 h-6" fill={isLiked ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-          </svg>
-        </motion.button>
-
-        {/* Download Button (conditional) */}
-        {allowDownload && (
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={handleDownload}
-            disabled={downloading}
-            className="p-4 bg-white/90 hover:bg-white text-gray-700 rounded-full backdrop-blur-lg transition-all disabled:opacity-50"
-          >
-            {downloading ? (
-              <svg className="animate-spin h-6 w-6" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-              </svg>
-            ) : (
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-            )}
-          </motion.button>
-        )}
-      </div>
-
-      {/* Like indicator */}
-      {isLiked && (
-        <div className="absolute top-4 right-4">
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            className="bg-red-500 text-white p-2 rounded-full shadow-lg"
-          >
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-            </svg>
-          </motion.div>
-        </div>
-      )}
-
-      {/* Caption */}
-      {media.caption && (
-        <div className="p-4 bg-white">
-          <p className="text-gray-700 font-medium text-sm">{media.caption}</p>
         </div>
       )}
     </motion.div>

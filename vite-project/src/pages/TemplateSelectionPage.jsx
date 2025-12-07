@@ -2,7 +2,11 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { getAllTemplates } from '../api/templateApi';
-import { toast } from 'react-toastify';
+import { toast } from 'react-hot-toast';
+import { FiPlus, FiEye, FiCheck, FiLayers } from 'react-icons/fi';
+import Button from '../components/ui/Button';
+import Skeleton from '../components/ui/Skeleton';
+import EmptyState from '../components/ui/EmptyState';
 
 const TemplateSelectionPage = () => {
   const { folderId } = useParams();
@@ -44,7 +48,7 @@ const TemplateSelectionPage = () => {
       elegant: 'bg-rose-500',
       birthday: 'bg-green-500',
       anniversary: 'bg-red-500',
-      minimal: 'bg-gray-500',
+      minimal: 'bg-slate-500',
       other: 'bg-indigo-500'
     };
     return colors[category] || colors.other;
@@ -52,17 +56,24 @@ const TemplateSelectionPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-purple-500 mx-auto mb-4"></div>
-          <p className="text-gray-600 text-lg">Loading templates...</p>
+      <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <div className="h-12 w-64 bg-slate-200 rounded-lg mx-auto mb-4 animate-pulse"></div>
+            <div className="h-6 w-96 bg-slate-200 rounded-lg mx-auto animate-pulse"></div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Skeleton key={i} className="h-96 w-full rounded-3xl" />
+            ))}
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <motion.div
@@ -71,10 +82,10 @@ const TemplateSelectionPage = () => {
           transition={{ duration: 0.6 }}
           className="text-center mb-12"
         >
-          <h1 className="text-5xl font-extrabold bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent mb-4">
+          <h1 className="text-4xl font-bold text-slate-900 mb-4">
             Choose Your Template
           </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
             Start with a stunning pre-designed template or create your own masterpiece from scratch
           </p>
         </motion.div>
@@ -87,22 +98,20 @@ const TemplateSelectionPage = () => {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5 }}
             onClick={() => handleSelectTemplate(null)}
-            className="group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 cursor-pointer overflow-hidden border-2 border-dashed border-gray-300 hover:border-purple-500 flex flex-col items-center justify-center min-h-[400px] transform hover:scale-105"
+            className="group relative bg-white rounded-3xl shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden border-2 border-dashed border-slate-300 hover:border-primary flex flex-col items-center justify-center min-h-[400px]"
           >
             <div className="p-8 text-center">
-              <div className="w-24 h-24 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:from-purple-200 group-hover:to-pink-200 transition-all duration-300 transform group-hover:rotate-12">
-                <svg className="w-12 h-12 text-purple-600 group-hover:text-purple-700 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
+              <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:bg-primary/20 transition-colors duration-300">
+                <FiPlus className="w-10 h-10 text-primary" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-3">Start from Scratch</h3>
-              <p className="text-gray-600 mb-6">Build your gift card exactly how you want it with complete creative freedom</p>
-              <div className="inline-flex items-center text-purple-600 font-semibold group-hover:text-purple-700">
+              <h3 className="text-2xl font-bold text-slate-900 mb-3">Start from Scratch</h3>
+              <p className="text-slate-600 mb-6">Build your gift card exactly how you want it with complete creative freedom</p>
+              <Button
+                variant="ghost"
+                className="text-primary group-hover:text-primary-hover"
+              >
                 Create Now
-                <svg className="w-5 h-5 ml-2 transform group-hover:translate-x-2 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
-              </div>
+              </Button>
             </div>
           </motion.div>
 
@@ -115,10 +124,10 @@ const TemplateSelectionPage = () => {
               transition={{ duration: 0.5, delay: index * 0.1 }}
               onMouseEnter={() => setHoveredTemplate(template._id)}
               onMouseLeave={() => setHoveredTemplate(null)}
-              className="group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-gray-200 hover:border-purple-400 transform hover:scale-105"
+              className="group relative bg-white rounded-3xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-slate-100"
             >
               {/* Thumbnail */}
-              <div className="relative h-56 overflow-hidden bg-gray-100">
+              <div className="relative h-56 overflow-hidden bg-slate-100">
                 {template.thumbnailUrl ? (
                   <img
                     src={template.thumbnailUrl}
@@ -127,18 +136,18 @@ const TemplateSelectionPage = () => {
                       e.target.nextSibling.style.display = 'flex';
                     }}
                     alt={template.name}
-                    className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700"
+                    className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
                   />
                 ) : null}
 
                 <div
                   className={`w-full h-full absolute inset-0 flex items-center justify-center bg-gradient-to-br ${template.category === 'wedding' ? 'from-pink-400 to-rose-500' :
-                      template.category === 'party' ? 'from-purple-500 to-indigo-600' :
-                        template.category === 'retro' ? 'from-amber-400 to-orange-500' :
-                          template.category === 'modern' ? 'from-blue-400 to-cyan-500' :
-                            template.category === 'elegant' ? 'from-rose-400 to-slate-600' :
-                              'from-gray-400 to-gray-600'
-                    } transform group-hover:scale-110 transition-transform duration-700`}
+                    template.category === 'party' ? 'from-purple-500 to-indigo-600' :
+                      template.category === 'retro' ? 'from-amber-400 to-orange-500' :
+                        template.category === 'modern' ? 'from-blue-400 to-cyan-500' :
+                          template.category === 'elegant' ? 'from-rose-400 to-slate-600' :
+                            'from-slate-400 to-slate-600'
+                    } transform group-hover:scale-105 transition-transform duration-500`}
                   style={{ display: template.thumbnailUrl ? 'none' : 'flex' }}
                 >
                   <span className="text-white font-bold text-2xl drop-shadow-md px-4 text-center">{template.name}</span>
@@ -146,49 +155,49 @@ const TemplateSelectionPage = () => {
 
                 {/* Category Badge */}
                 <div className="absolute top-4 right-4">
-                  <span className={`${getCategoryColor(template.category)} text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg uppercase tracking-wide`}>
+                  <span className={`${getCategoryColor(template.category)} text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm uppercase tracking-wide`}>
                     {template.category}
                   </span>
                 </div>
 
                 {/* Hover Overlay with Buttons */}
-                <div className={`absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center gap-3 transition-opacity duration-300 ${hoveredTemplate === template._id ? 'opacity-100' : 'opacity-0'}`}>
-                  <button
+                <div className={`absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center gap-3 transition-opacity duration-300 ${hoveredTemplate === template._id ? 'opacity-100' : 'opacity-0'}`}>
+                  <Button
+                    variant="secondary"
                     onClick={(e) => {
                       e.stopPropagation();
-                      toast.info('Preview feature coming soon!');
+                      toast('Preview feature coming soon!', { icon: '👁️' });
                     }}
-                    className="bg-white/20 hover:bg-white/30 backdrop-blur-md text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-110 border border-white/30"
+                    icon={FiEye}
                   >
-                    👁️ Preview
-                  </button>
-                  <button
+                    Preview
+                  </Button>
+                  <Button
+                    variant="primary"
                     onClick={() => handleSelectTemplate(template._id)}
-                    className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-110 shadow-lg"
+                    icon={FiCheck}
                   >
                     Use Template
-                  </button>
+                  </Button>
                 </div>
               </div>
 
               {/* Template Info */}
               <div className="p-6">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2 group-hover:text-purple-600 transition-colors">
+                <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-primary transition-colors">
                   {template.name}
                 </h3>
-                <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                <p className="text-slate-600 text-sm mb-4 line-clamp-2">
                   {template.description || 'A beautiful template for your gift card'}
                 </p>
 
                 {/* Features */}
-                <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                  <div className="flex items-center gap-2 text-sm text-gray-500">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
-                    </svg>
+                <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                  <div className="flex items-center gap-2 text-sm text-slate-500">
+                    <FiLayers className="w-4 h-4" />
                     Fully Customizable
                   </div>
-                  <div className="text-purple-500 font-semibold opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-2 group-hover:translate-x-0 duration-300">
+                  <div className="text-primary font-medium text-sm opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-2 group-hover:translate-x-0 duration-300">
                     Select →
                   </div>
                 </div>
@@ -199,18 +208,18 @@ const TemplateSelectionPage = () => {
 
         {/* Empty State */}
         {templates.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-16"
-          >
-            <div className="text-6xl mb-4">🎨</div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">No Templates Available</h3>
-            <p className="text-gray-600 mb-6">Run the seeder script to populate templates</p>
-            <code className="bg-gray-100 text-gray-800 px-4 py-2 rounded-lg text-sm">
-              node server/seedTemplates.js
-            </code>
-          </motion.div>
+          <div className="mt-12">
+            <EmptyState
+              title="No Templates Available"
+              description="Run the seeder script to populate templates"
+              icon={FiLayers}
+              action={
+                <code className="bg-slate-100 text-slate-800 px-4 py-2 rounded-lg text-sm font-mono mt-4 block">
+                  node server/seedTemplates.js
+                </code>
+              }
+            />
+          </div>
         )}
       </div>
     </div>

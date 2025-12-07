@@ -14,7 +14,6 @@ const AdminLayout = ({ children }) => {
     const fetchConfig = async () => {
       try {
         const token = localStorage.getItem('token');
-        // Simple fetch to avoid axios import if not needed, or use axios
         const response = await fetch('http://localhost:5000/api/admin/config', {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -29,11 +28,22 @@ const AdminLayout = ({ children }) => {
     fetchConfig();
   }, []);
 
+  const [isCollapsed, setIsCollapsed] = React.useState(false);
+
+  const toggleSidebar = () => {
+    setIsCollapsed(!isCollapsed);
+  };
+
   return (
-    <div className="flex min-h-screen bg-gray-100" style={{ fontFamily: config.fontFamily }}>
-      {config.showSidebar && <AdminSidebar backgroundColor={config.sidebarColor} />}
-      <main className="flex-1 flex flex-col overflow-hidden">
-        {/* Dynamic Navbar Area if needed, or just content */}
+    <div className="flex min-h-screen bg-slate-50" style={{ fontFamily: config.fontFamily }}>
+      {config.showSidebar && (
+        <AdminSidebar
+          backgroundColor={config.sidebarColor}
+          isCollapsed={isCollapsed}
+          onToggleCollapse={toggleSidebar}
+        />
+      )}
+      <main className="flex-1 flex flex-col overflow-hidden transition-all duration-300">
         <div className="flex-1 p-6 overflow-auto">
           {children}
         </div>

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { toast } from 'react-toastify';
+import { toast } from 'react-hot-toast';
+import { FiX, FiInfo, FiCheck } from 'react-icons/fi';
+import Button from './ui/Button';
 
 const PhotographerSettings = ({ isOpen, onClose, folderId, currentSettings, onUpdate }) => {
   const [settings, setSettings] = useState({
@@ -94,31 +96,27 @@ const PhotographerSettings = ({ isOpen, onClose, folderId, currentSettings, onUp
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="sticky top-0 bg-gradient-to-r from-pink-500 to-rose-500 text-white p-6 rounded-t-2xl">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold">Photographer Settings</h2>
-                <p className="text-pink-100 text-sm mt-1">Protect your work with watermarks</p>
-              </div>
-              <button
-                onClick={onClose}
-                className="text-white hover:bg-white/20 rounded-full p-2 transition-colors"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+          <div className="sticky top-0 bg-white border-b border-slate-100 p-6 rounded-t-2xl flex items-center justify-between z-10">
+            <div>
+              <h2 className="text-xl font-bold text-slate-800">Photographer Settings</h2>
+              <p className="text-slate-500 text-sm mt-1">Configure album security and features</p>
             </div>
+            <button
+              onClick={onClose}
+              className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full p-2 transition-colors"
+            >
+              <FiX className="w-5 h-5" />
+            </button>
           </div>
 
           {/* Content */}
           <div className="p-6 space-y-6">
             {/* Watermark Toggle */}
-            <div className="bg-gray-50 rounded-xl p-4">
+            <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="font-semibold text-gray-900">Enable Watermark</h3>
-                  <p className="text-sm text-gray-600">Protect your images with a watermark overlay</p>
+                  <h3 className="font-semibold text-slate-800">Enable Watermark</h3>
+                  <p className="text-sm text-slate-500">Protect your images with a watermark overlay</p>
                 </div>
                 <button
                   onClick={() => setSettings({
@@ -128,11 +126,11 @@ const PhotographerSettings = ({ isOpen, onClose, folderId, currentSettings, onUp
                       enabled: !settings.watermarkSettings.enabled
                     }
                   })}
-                  className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${settings.watermarkSettings.enabled ? 'bg-pink-500' : 'bg-gray-300'
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.watermarkSettings.enabled ? 'bg-primary' : 'bg-slate-300'
                     }`}
                 >
                   <span
-                    className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${settings.watermarkSettings.enabled ? 'translate-x-7' : 'translate-x-1'
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${settings.watermarkSettings.enabled ? 'translate-x-6' : 'translate-x-1'
                       }`}
                   />
                 </button>
@@ -236,22 +234,22 @@ const PhotographerSettings = ({ isOpen, onClose, folderId, currentSettings, onUp
             )}
 
             {/* Allow Download Toggle */}
-            <div className="bg-gray-50 rounded-xl p-4">
+            <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="font-semibold text-gray-900">Allow Downloads</h3>
-                  <p className="text-sm text-gray-600">Enable clean image downloads (e.g., after payment)</p>
+                  <h3 className="font-semibold text-slate-800">Allow Downloads</h3>
+                  <p className="text-sm text-slate-500">Enable clean image downloads (e.g., after payment)</p>
                 </div>
                 <button
                   onClick={() => setSettings({
                     ...settings,
                     allowDownload: !settings.allowDownload
                   })}
-                  className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${settings.allowDownload ? 'bg-green-500' : 'bg-gray-300'
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.allowDownload ? 'bg-green-500' : 'bg-slate-300'
                     }`}
                 >
                   <span
-                    className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${settings.allowDownload ? 'translate-x-7' : 'translate-x-1'
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${settings.allowDownload ? 'translate-x-6' : 'translate-x-1'
                       }`}
                   />
                 </button>
@@ -259,22 +257,22 @@ const PhotographerSettings = ({ isOpen, onClose, folderId, currentSettings, onUp
             </div>
 
             {/* Allow Client Selection Toggle */}
-            <div className="bg-gray-50 rounded-xl p-4">
+            <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="font-semibold text-gray-900">Allow Client Selections</h3>
-                  <p className="text-sm text-gray-600">Enable clients to select favorite photos and send them to you</p>
+                  <h3 className="font-semibold text-slate-800">Allow Client Selections</h3>
+                  <p className="text-sm text-slate-500">Enable clients to select favorite photos and send them to you</p>
                 </div>
                 <button
                   onClick={() => setSettings({
                     ...settings,
                     allowClientSelection: !settings.allowClientSelection
                   })}
-                  className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${settings.allowClientSelection ? 'bg-pink-500' : 'bg-gray-300'
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.allowClientSelection ? 'bg-primary' : 'bg-slate-300'
                     }`}
                 >
                   <span
-                    className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${settings.allowClientSelection ? 'translate-x-7' : 'translate-x-1'
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${settings.allowClientSelection ? 'translate-x-6' : 'translate-x-1'
                       }`}
                   />
                 </button>
@@ -300,20 +298,13 @@ const PhotographerSettings = ({ isOpen, onClose, folderId, currentSettings, onUp
           </div>
 
           {/* Footer */}
-          <div className="sticky bottom-0 bg-gray-50 px-6 py-4 rounded-b-2xl border-t border-gray-200 flex justify-end gap-3">
-            <button
-              onClick={onClose}
-              className="px-6 py-2 text-gray-700 hover:bg-gray-200 rounded-lg font-medium transition-colors"
-            >
+          <div className="sticky bottom-0 bg-white px-6 py-4 rounded-b-2xl border-t border-slate-100 flex justify-end gap-3 z-10">
+            <Button variant="ghost" onClick={onClose}>
               Cancel
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={loading}
-              className="px-6 py-2 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-lg font-medium hover:from-pink-600 hover:to-rose-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Saving...' : 'Save Settings'}
-            </button>
+            </Button>
+            <Button onClick={handleSave} isLoading={loading}>
+              Save Settings
+            </Button>
           </div>
         </motion.div>
       </motion.div>

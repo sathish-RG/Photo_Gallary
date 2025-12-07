@@ -1,8 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import Navbar from './components/Navbar';
+import Layout from './components/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
@@ -12,6 +11,9 @@ import FolderDetails from './pages/FolderDetails';
 import GiftCardBuilder from './pages/GiftCardBuilder';
 import TemplateSelectionPage from './pages/TemplateSelectionPage';
 import GiftCardViewer from './pages/GiftCardViewer';
+import ClaimGift from './pages/ClaimGift';
+import GiftCards from './pages/GiftCards';
+import Settings from './pages/Settings';
 import AdminDashboard from './pages/AdminDashboard';
 import UserManagement from './pages/UserManagement';
 import UserFiles from './pages/UserFiles';
@@ -21,13 +23,19 @@ import ReportedContent from './pages/ReportedContent';
 import AdminCreateTemplate from './pages/AdminCreateTemplate';
 import AdminTemplates from './pages/AdminTemplates';
 import AdminSettings from './pages/AdminSettings';
+import AdminBatchGenerator from './pages/AdminBatchGenerator';
+import NotFound from './pages/NotFound';
 import './App.css';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      </div>
+    );
   }
 
   // If the logged‑in user is an admin, send them to the admin dashboard
@@ -35,223 +43,230 @@ const PrivateRoute = ({ children }) => {
     return <Navigate to="/admin/dashboard" replace />;
   }
 
-  return user ? children : <Navigate to="/login" replace />;
+  return user ? <Layout>{children}</Layout> : <Navigate to="/login" replace />;
 };
 
 const Dashboard = () => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-pink-100 p-8">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl p-8 border border-pink-100 mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent mb-2">
-                Welcome back, {user?.username}! 👋
-              </h1>
-              <p className="text-gray-600">Manage your photos and account settings</p>
-            </div>
-            <div className="h-16 w-16 bg-gradient-to-br from-pink-400 to-rose-500 rounded-2xl flex items-center justify-center shadow-lg">
-              <svg className="h-10 w-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+    <div className="max-w-6xl mx-auto">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-slate-800">
+          Welcome back, {user?.username}! 👋
+        </h1>
+        <p className="text-slate-500 mt-2">Manage your photos and account settings</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Link
+          to="/gallery"
+          className="group bg-white rounded-2xl p-8 shadow-sm border border-slate-100 hover:shadow-md hover:-translate-y-1 transition-all duration-300"
+        >
+          <div className="flex items-center space-x-4">
+            <div className="h-14 w-14 bg-indigo-50 rounded-xl flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
+              <svg className="h-8 w-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
               </svg>
             </div>
+            <div>
+              <h3 className="text-xl font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">
+                My Photo Albums
+              </h3>
+              <p className="text-slate-500 text-sm mt-1">Organize your photo albums</p>
+            </div>
           </div>
-        </div>
+        </Link>
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Link
-            to="/gallery"
-            className="group bg-white/80 backdrop-blur-lg rounded-3xl shadow-xl p-8 border border-pink-100 hover:shadow-2xl transition-all transform hover:scale-[1.02]"
-          >
-            <div className="flex items-center space-x-4">
-              <div className="h-14 w-14 bg-gradient-to-br from-pink-400 to-rose-500 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                <svg className="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-gray-800 group-hover:text-pink-600 transition-colors">
-                  My Photo Albums
-                </h3>
-                <p className="text-gray-600 text-sm">Organize your photo albums</p>
-              </div>
+        <Link
+          to="/gift-cards"
+          className="group bg-white rounded-2xl p-8 shadow-sm border border-slate-100 hover:shadow-md hover:-translate-y-1 transition-all duration-300"
+        >
+          <div className="flex items-center space-x-4">
+            <div className="h-14 w-14 bg-purple-50 rounded-xl flex items-center justify-center group-hover:bg-purple-100 transition-colors">
+              <svg className="h-8 w-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+              </svg>
             </div>
-          </Link>
-
-          <button
-            onClick={logout}
-            className="group bg-white/80 backdrop-blur-lg rounded-3xl shadow-xl p-8 border border-pink-100 hover:shadow-2xl transition-all transform hover:scale-[1.02] text-left"
-          >
-            <div className="flex items-center space-x-4">
-              <div className="h-14 w-14 bg-gradient-to-br from-rose-400 to-red-500 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                <svg className="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-gray-800 group-hover:text-rose-600 transition-colors">
-                  Logout
-                </h3>
-                <p className="text-gray-600 text-sm">Sign out of your account</p>
-              </div>
+            <div>
+              <h3 className="text-xl font-bold text-slate-800 group-hover:text-purple-600 transition-colors">
+                Gift Cards
+              </h3>
+              <p className="text-slate-500 text-sm mt-1">Manage your gift cards</p>
             </div>
-          </button>
-        </div>
+          </div>
+        </Link>
       </div>
     </div>
   );
 };
 
-// Component to conditionally render Navbar
 const AppContent = () => {
-  const location = useLocation();
-  const hideNavbar = location.pathname.startsWith('/view/');
-
   return (
-    <>
-      {!hideNavbar && <Navbar />}
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password/:token" element={<ResetPassword />} />
-        <Route
-          path="/"
-          element={
-            <PrivateRoute>
-              <Dashboard />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/gallery"
-          element={
-            <PrivateRoute>
-              <GalleryDashboard />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/gallery/:folderId"
-          element={
-            <PrivateRoute>
-              <FolderDetails />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/gallery/:folderId/select-template"
-          element={
-            <PrivateRoute>
-              <TemplateSelectionPage />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/gallery/:folderId/create-gift-card"
-          element={
-            <PrivateRoute>
-              <GiftCardBuilder />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/gallery/:folderId/gift-card/:giftCardId/edit"
-          element={
-            <PrivateRoute>
-              <GiftCardBuilder />
-            </PrivateRoute>
-          }
-        />
-        {/* Public route - no authentication */}
-        <Route path="/view/:slug" element={<GiftCardViewer />} />
-        {/* Admin routes */}
-        <Route
-          path="/admin/templates"
-          element={
-            <AdminRoute>
-              <AdminLayout>
-                <AdminTemplates />
-              </AdminLayout>
-            </AdminRoute>
-          }
-        />
-        <Route
-          path="/admin/templates/create"
-          element={
-            <AdminRoute>
-              <AdminLayout>
-                <AdminCreateTemplate />
-              </AdminLayout>
-            </AdminRoute>
-          }
-        />
-        <Route
-          path="/admin/templates/edit/:id"
-          element={
-            <AdminRoute>
-              <AdminLayout>
-                <AdminCreateTemplate />
-              </AdminLayout>
-            </AdminRoute>
-          }
-        />
-        <Route
-          path="/admin/settings"
-          element={
-            <AdminRoute>
-              <AdminLayout>
-                <AdminSettings />
-              </AdminLayout>
-            </AdminRoute>
-          }
-        />
-        <Route
-          path="/admin/dashboard"
-          element={
-            <AdminRoute>
-              <AdminLayout>
-                <AdminDashboard />
-              </AdminLayout>
-            </AdminRoute>
-          }
-        />
-        <Route
-          path="/admin/users"
-          element={
-            <AdminRoute>
-              <AdminLayout>
-                <UserManagement />
-              </AdminLayout>
-            </AdminRoute>
-          }
-        />
-        <Route
-          path="/admin/users/:id/files"
-          element={
-            <AdminRoute>
-              <AdminLayout>
-                <UserFiles />
-              </AdminLayout>
-            </AdminRoute>
-          }
-        />
-        <Route
-          path="/admin/reported"
-          element={
-            <AdminRoute>
-              <AdminLayout>
-                <ReportedContent />
-              </AdminLayout>
-            </AdminRoute>
-          }
-        />
-
-      </Routes>
-    </>
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password/:token" element={<ResetPassword />} />
+      <Route
+        path="/"
+        element={
+          <PrivateRoute>
+            <Dashboard />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/gallery"
+        element={
+          <PrivateRoute>
+            <GalleryDashboard />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/gallery/:folderId"
+        element={
+          <PrivateRoute>
+            <FolderDetails />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/gift-cards"
+        element={
+          <PrivateRoute>
+            <GiftCards />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <PrivateRoute>
+            <Settings />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/gallery/:folderId/select-template"
+        element={
+          <PrivateRoute>
+            <TemplateSelectionPage />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/gallery/:folderId/create-gift-card"
+        element={
+          <PrivateRoute>
+            <GiftCardBuilder />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/gallery/:folderId/gift-card/:giftCardId/edit"
+        element={
+          <PrivateRoute>
+            <GiftCardBuilder />
+          </PrivateRoute>
+        }
+      />
+      {/* Public route - no authentication */}
+      <Route path="/view/:slug" element={<GiftCardViewer />} />
+      <Route path="/claim/:qrCodeId" element={<ClaimGift />} />
+      {/* Admin routes */}
+      <Route
+        path="/admin/templates"
+        element={
+          <AdminRoute>
+            <AdminLayout>
+              <AdminTemplates />
+            </AdminLayout>
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/templates/create"
+        element={
+          <AdminRoute>
+            <AdminLayout>
+              <AdminCreateTemplate />
+            </AdminLayout>
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/templates/edit/:id"
+        element={
+          <AdminRoute>
+            <AdminLayout>
+              <AdminCreateTemplate />
+            </AdminLayout>
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/settings"
+        element={
+          <AdminRoute>
+            <AdminLayout>
+              <AdminSettings />
+            </AdminLayout>
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/batch-generator"
+        element={
+          <AdminRoute>
+            <AdminLayout>
+              <AdminBatchGenerator />
+            </AdminLayout>
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/dashboard"
+        element={
+          <AdminRoute>
+            <AdminLayout>
+              <AdminDashboard />
+            </AdminLayout>
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/users"
+        element={
+          <AdminRoute>
+            <AdminLayout>
+              <UserManagement />
+            </AdminLayout>
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/users/:id/files"
+        element={
+          <AdminRoute>
+            <AdminLayout>
+              <UserFiles />
+            </AdminLayout>
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/reported"
+        element={
+          <AdminRoute>
+            <AdminLayout>
+              <ReportedContent />
+            </AdminLayout>
+          </AdminRoute>
+        }
+      />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
   );
 };
 
@@ -260,7 +275,20 @@ function App() {
     <Router>
       <AuthProvider>
         <AppContent />
-        <ToastContainer position="top-right" autoClose={3000} />
+        <Toaster position="bottom-right" toastOptions={{
+          style: {
+            background: '#333',
+            color: '#fff',
+            borderRadius: '10px',
+          },
+          success: {
+            duration: 3000,
+            theme: {
+              primary: '#4f46e5',
+              secondary: 'black',
+            },
+          },
+        }} />
       </AuthProvider>
     </Router>
   );

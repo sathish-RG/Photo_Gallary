@@ -60,3 +60,22 @@ export const verifyFolderPassword = async (folderId, password) => {
   return response.data;
 };
 
+/**
+ * Get folder settings
+ * @param {string} folderId - The ID of the folder
+ */
+export const getFolderSettings = async (folderId) => {
+  const response = await axios.get(`${API_URL}/${folderId}/settings`, getAuthHeader());
+  return response.data;
+};
+
+/**
+ * Update folder settings
+ * @param {string} folderId - The ID of the folder
+ * @param {Object} settings - The settings to update
+ */
+export const updateFolderSettings = async (folderId, settings) => {
+  const response = await axios.put(`${API_URL}/${folderId}/settings`, settings, getAuthHeader());
+  return response.data;
+};
+
