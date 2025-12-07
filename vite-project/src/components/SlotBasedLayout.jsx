@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
  * Renders media items using template-defined layout slots
  * Each slot has specific position, size, and styling from the admin template
  */
-const SlotBasedLayout = ({ layoutSlots = [], mediaItems = [], themeColor = '#ec4899', baseHeight = 600 }) => {
+const SlotBasedLayout = ({ layoutSlots = [], mediaItems = [], themeColor = '#ec4899', baseHeight = 600, selectedMedia = new Set(), onSelect = () => { }, allowSelection = false }) => {
   const containerRef = useRef(null);
   const [scale, setScale] = useState(1);
   const BASE_WIDTH = 800; // Standard design width
@@ -50,6 +50,8 @@ const SlotBasedLayout = ({ layoutSlots = [], mediaItems = [], themeColor = '#ec4
         {mediaItems.map((item, index) => {
           const url = getMediaUrl(item);
           if (!url) return null;
+          const mediaId = item.mediaId?._id || item._id;
+          const isSelected = selectedMedia.has(mediaId);
 
           return (
             <div key={item._id || `item-${index}`} className="relative group">
@@ -58,6 +60,22 @@ const SlotBasedLayout = ({ layoutSlots = [], mediaItems = [], themeColor = '#ec4
                 alt={item.caption || `Photo ${index + 1}`}
                 className="w-full h-full object-cover rounded-xl shadow-lg"
               />
+              {/* Selection Overlay */}
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center">
+                {allowSelection && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelect(mediaId);
+                    }}
+                    className={`p-3 rounded-full shadow-lg transition-all transform hover:scale-110 ${isSelected ? 'bg-pink-500 text-white' : 'bg-white/80 text-gray-600 hover:bg-white'}`}
+                  >
+                    <svg className="w-6 h-6" fill={isSelected ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                  </button>
+                )}
+              </div>
             </div>
           );
         })}
@@ -115,6 +133,9 @@ const SlotBasedLayout = ({ layoutSlots = [], mediaItems = [], themeColor = '#ec4
             );
           }
 
+          const mediaId = mediaItem.mediaId?._id || mediaItem._id;
+          const isSelected = selectedMedia.has(mediaId);
+
           return (
             <motion.div
               key={slot.id}
@@ -158,8 +179,23 @@ const SlotBasedLayout = ({ layoutSlots = [], mediaItems = [], themeColor = '#ec4
 
               {/* Overlay on hover */}
               <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 flex items-center justify-center">
+                {/* Selection Button */}
+                {allowSelection && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelect(mediaId);
+                    }}
+                    className={`absolute top-2 right-2 p-2 rounded-full shadow-lg transition-all transform hover:scale-110 opacity-0 group-hover:opacity-100 ${isSelected ? 'bg-pink-500 text-white opacity-100' : 'bg-white/80 text-gray-600 hover:bg-white'}`}
+                  >
+                    <svg className="w-5 h-5" fill={isSelected ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                  </button>
+                )}
+
                 {mediaItem.caption && (
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-lg shadow-lg">
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-lg shadow-lg mt-8">
                     <p className="text-sm text-gray-800 font-medium">
                       {mediaItem.caption}
                     </p>

@@ -5,11 +5,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-toastify';
 import { uploadMedia, getMedia, deleteMedia } from '../api/mediaApi';
 import { getFolders } from '../api/folderApi';
+import { getSelectionsByFolder } from '../api/selectionApi';
 import { uploadFileToCloudinary } from '../utils/cloudinaryStorage';
 import ConfirmationModal from '../components/ConfirmationModal';
 import ImagePreviewModal from '../components/ImagePreviewModal';
 import GiftCardManager from '../components/GiftCardManager';
 import PhotographerSettings from '../components/PhotographerSettings';
+import ClientSelectionsList from '../components/ClientSelectionsList';
 
 /**
  * FolderDetails Component
@@ -36,6 +38,10 @@ const FolderDetails = () => {
   // Settings modal state
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [folderSettings, setFolderSettings] = useState(null);
+
+  // Client Selections State
+  const [selections, setSelections] = useState([]);
+  const [loadingSelections, setLoadingSelections] = useState(false);
 
   useEffect(() => {
     fetchFolderDetails();
@@ -88,6 +94,25 @@ const FolderDetails = () => {
       console.error('Error fetching folder settings:', error);
     }
   };
+
+  const fetchSelections = async () => {
+    try {
+      setLoadingSelections(true);
+      const response = await getSelectionsByFolder(folderId);
+      setSelections(response.data.data);
+    } catch (error) {
+      console.error('Error fetching selections:', error);
+      toast.error('Failed to load client selections');
+    } finally {
+      setLoadingSelections(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'selections') {
+      fetchSelections();
+    }
+  }, [activeTab, folderId]);
 
   const handleSettingsUpdate = (newSettings) => {
     setFolderSettings(newSettings);
@@ -284,6 +309,7 @@ const FolderDetails = () => {
     { id: 'videos', label: 'Videos', icon: '🎬' },
     { id: 'audio', label: 'Audio', icon: '🎵' },
     { id: 'gifts', label: 'Saved Gifts', icon: '🎁' },
+    { id: 'selections', label: 'Client Selections', icon: '❤️' },
   ];
 
   return (
@@ -507,6 +533,8 @@ const FolderDetails = () => {
 
           {activeTab === 'gifts' ? (
             <GiftCardManager />
+          ) : activeTab === 'selections' ? (
+            <ClientSelectionsList selections={selections} loading={loadingSelections} />
           ) : loading ? (
             <div className="flex justify-center items-center py-20">
               <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-pink-500"></div>

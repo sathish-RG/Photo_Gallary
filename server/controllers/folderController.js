@@ -252,6 +252,7 @@ exports.getFolderSettings = async (req, res) => {
       data: {
         watermarkSettings: folder.watermarkSettings,
         allowDownload: folder.allowDownload,
+        allowClientSelection: folder.allowClientSelection || false,
       },
     });
   } catch (error) {
@@ -270,7 +271,7 @@ exports.getFolderSettings = async (req, res) => {
  */
 exports.updateFolderSettings = async (req, res) => {
   try {
-    const { watermarkSettings, allowDownload } = req.body;
+    const { watermarkSettings, allowDownload, allowClientSelection } = req.body;
 
     const folder = await Folder.findById(req.params.id);
 
@@ -305,6 +306,11 @@ exports.updateFolderSettings = async (req, res) => {
       folder.allowDownload = allowDownload;
     }
 
+    // Update client selection permission if provided
+    if (allowClientSelection !== undefined) {
+      folder.allowClientSelection = allowClientSelection;
+    }
+
     await folder.save();
 
     res.status(200).json({
@@ -312,6 +318,7 @@ exports.updateFolderSettings = async (req, res) => {
       data: {
         watermarkSettings: folder.watermarkSettings,
         allowDownload: folder.allowDownload,
+        allowClientSelection: folder.allowClientSelection,
       },
       message: 'Folder settings updated successfully',
     });

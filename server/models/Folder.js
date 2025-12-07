@@ -58,6 +58,11 @@ const folderSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  // Client Selection control - if true, clients can select favorites
+  allowClientSelection: {
+    type: Boolean,
+    default: false,
+  },
   // Timestamp when folder was created
   createdAt: {
     type: Date,

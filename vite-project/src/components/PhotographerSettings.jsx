@@ -12,12 +12,23 @@ const PhotographerSettings = ({ isOpen, onClose, folderId, currentSettings, onUp
       fontSize: 80,
     },
     allowDownload: false,
+    allowClientSelection: false,
   });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (currentSettings) {
-      setSettings(currentSettings);
+      setSettings(prev => ({
+        ...prev,
+        ...currentSettings,
+        watermarkSettings: {
+          ...prev.watermarkSettings,
+          ...(currentSettings.watermarkSettings || {})
+        },
+        allowClientSelection: currentSettings.allowClientSelection !== undefined
+          ? currentSettings.allowClientSelection
+          : prev.allowClientSelection
+      }));
     }
   }, [currentSettings]);
 
@@ -247,6 +258,29 @@ const PhotographerSettings = ({ isOpen, onClose, folderId, currentSettings, onUp
               </div>
             </div>
 
+            {/* Allow Client Selection Toggle */}
+            <div className="bg-gray-50 rounded-xl p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold text-gray-900">Allow Client Selections</h3>
+                  <p className="text-sm text-gray-600">Enable clients to select favorite photos and send them to you</p>
+                </div>
+                <button
+                  onClick={() => setSettings({
+                    ...settings,
+                    allowClientSelection: !settings.allowClientSelection
+                  })}
+                  className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${settings.allowClientSelection ? 'bg-pink-500' : 'bg-gray-300'
+                    }`}
+                >
+                  <span
+                    className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${settings.allowClientSelection ? 'translate-x-7' : 'translate-x-1'
+                      }`}
+                  />
+                </button>
+              </div>
+            </div>
+
             {/* Preview Info */}
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
               <div className="flex items-start gap-3">
@@ -258,6 +292,7 @@ const PhotographerSettings = ({ isOpen, onClose, folderId, currentSettings, onUp
                   <p className="text-sm text-blue-700 mt-1">
                     When watermark is enabled, all images in this album will display with the watermark overlay.
                     Clean images are only accessible when "Allow Downloads" is enabled.
+                    Client selections allow viewers to pick favorites and send them to you.
                   </p>
                 </div>
               </div>

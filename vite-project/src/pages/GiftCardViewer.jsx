@@ -5,6 +5,7 @@ import Confetti from 'react-confetti';
 import { toast } from 'react-toastify';
 import html2canvas from 'html2canvas';
 import { getGiftCardBySlug, unlockGiftCard, downloadGiftCardZip } from '../api/giftCardApi';
+import { createSelection } from '../api/selectionApi';
 import SlotBasedLayout from '../components/SlotBasedLayout';
 
 /**
@@ -31,11 +32,15 @@ const GiftCardViewer = () => {
   const giftCardRef = useRef(null);
 
   // Photo gallery state
-  const [likes, setLikes] = useState(() => {
-    const saved = localStorage.getItem(`giftcard-${slug}-likes`);
-    return saved ? JSON.parse(saved) : {};
-  });
+  const [selectedMedia, setSelectedMedia] = useState(new Set());
   const [allowDownload, setAllowDownload] = useState(false);
+
+  // Selection Modal State
+  const [showSelectionModal, setShowSelectionModal] = useState(false);
+  const [clientName, setClientName] = useState('');
+  const [clientEmail, setClientEmail] = useState('');
+  const [submittingSelection, setSubmittingSelection] = useState(false);
+  const [selectionMessage, setSelectionMessage] = useState('');
 
   useEffect(() => {
     // Set window size after component mounts (client-side only)
@@ -174,13 +179,51 @@ const GiftCardViewer = () => {
     }
   };
 
-  // Like handler
-  const handleLike = (photoId) => {
-    setLikes(prev => {
-      const newLikes = { ...prev, [photoId]: !prev[photoId] };
-      localStorage.setItem(`giftcard-${slug}-likes`, JSON.stringify(newLikes));
-      return newLikes;
+  // Selection handler
+  const handleSelect = (photoId) => {
+    if (!giftCard.allowClientSelection) return;
+
+    setSelectedMedia(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(photoId)) {
+        newSet.delete(photoId);
+      } else {
+        newSet.add(photoId);
+      }
+      return newSet;
     });
+  };
+
+  const handleSubmitSelection = async (e) => {
+    e.preventDefault();
+    if (!clientName || !clientEmail) {
+      toast.error('Please fill in your name and email');
+      return;
+    }
+
+    try {
+      setSubmittingSelection(true);
+      await createSelection({
+        folderId: giftCard.albumId, // Correct field name from schema
+        giftCardId: giftCard._id,
+        clientName,
+        clientEmail,
+        mediaIds: Array.from(selectedMedia),
+        message: selectionMessage
+      });
+
+      toast.success('Favorites sent to photographer!');
+      setShowSelectionModal(false);
+      setSelectedMedia(new Set()); // Clear selections or keep them? Usually clear or show status.
+      setClientName('');
+      setClientEmail('');
+      setSelectionMessage('');
+    } catch (error) {
+      console.error('Error submitting selection:', error);
+      toast.error('Failed to send favorites. Please try again.');
+    } finally {
+      setSubmittingSelection(false);
+    }
   };
 
   if (loading) {
@@ -418,6 +461,9 @@ const GiftCardViewer = () => {
                       mediaItems={block.mediaItems}
                       themeColor={themeColor}
                       baseHeight={giftCard.template.layoutConfig?.canvasHeight || 600}
+                      selectedMedia={selectedMedia}
+                      onSelect={handleSelect}
+                      allowSelection={giftCard.allowClientSelection}
                     />
                   ) : (
                     <>
@@ -435,6 +481,9 @@ const GiftCardViewer = () => {
                               item={item}
                               themeColor={themeColor}
                               layoutType="standard"
+                              isSelected={selectedMedia.has(item.mediaId?._id)}
+                              onSelect={() => handleSelect(item.mediaId?._id)}
+                              allowSelection={giftCard.allowClientSelection}
                             />
                           ))}
                         </div>
@@ -449,6 +498,9 @@ const GiftCardViewer = () => {
                               item={item}
                               themeColor={themeColor}
                               layoutType="collage"
+                              isSelected={selectedMedia.has(item.mediaId?._id)}
+                              onSelect={() => handleSelect(item.mediaId?._id)}
+                              allowSelection={giftCard.allowClientSelection}
                             />
                           ))}
                         </div>
@@ -462,7 +514,7 @@ const GiftCardViewer = () => {
         </div>
 
         {/* Footer */}
-        <motion.div
+        < motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1.2, duration: 0.5 }}
@@ -482,6 +534,119 @@ const GiftCardViewer = () => {
           </div>
         </motion.div>
       </div>
+      {/* Floating Action Bar for Selections */}
+      <AnimatePresence>
+        {giftCard.allowClientSelection && selectedMedia.size > 0 && (
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 bg-white/90 backdrop-blur-xl rounded-full shadow-2xl border border-pink-200 p-2 pl-6 flex items-center gap-4"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-pink-600 font-bold text-lg">{selectedMedia.size}</span>
+              <span className="text-gray-600 font-medium">selected</span>
+            </div>
+            <button
+              onClick={() => setShowSelectionModal(true)}
+              className="px-6 py-3 bg-gradient-to-r from-pink-500 to-rose-500 text-white font-semibold rounded-full hover:shadow-lg transition-all transform hover:scale-105 active:scale-95 flex items-center gap-2"
+            >
+              <span>Send to Photographer</span>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+              </svg>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Selection Submission Modal */}
+      <AnimatePresence>
+        {showSelectionModal && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"
+            >
+              <div className="p-6 border-b border-gray-100">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-bold text-gray-800">Send Favorites</h3>
+                  <button
+                    onClick={() => setShowSelectionModal(false)}
+                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  >
+                    <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <form onSubmit={handleSubmitSelection} className="p-6 space-y-4">
+                <div className="bg-pink-50 rounded-xl p-4 mb-4">
+                  <p className="text-pink-800 text-sm">
+                    You are sending <strong>{selectedMedia.size}</strong> photos to the photographer.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Your Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={clientName}
+                    onChange={(e) => setClientName(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none transition-all"
+                    placeholder="John Doe"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                  <input
+                    type="email"
+                    required
+                    value={clientEmail}
+                    onChange={(e) => setClientEmail(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none transition-all"
+                    placeholder="john@example.com"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Message (Optional)</label>
+                  <textarea
+                    value={selectionMessage}
+                    onChange={(e) => setSelectionMessage(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none transition-all resize-none h-24"
+                    placeholder="Any specific instructions..."
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={submittingSelection}
+                  className="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {submittingSelection ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Sending...
+                    </>
+                  ) : (
+                    'Send Selection'
+                  )}
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
@@ -574,7 +739,7 @@ const Slideshow = ({ mediaItems }) => {
   );
 };
 
-const MediaGridItem = ({ item, themeColor, layoutType }) => {
+const MediaGridItem = ({ item, themeColor, layoutType, isSelected, onSelect, allowSelection }) => {
   const media = item?.mediaId;
   if (!media) return null;
 
@@ -584,10 +749,27 @@ const MediaGridItem = ({ item, themeColor, layoutType }) => {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.5 }}
-      className={`bg-white/90 backdrop-blur-lg rounded-2xl shadow-xl overflow-hidden border-4 hover:shadow-2xl transition-all transform hover:scale-[1.02] ${layoutType === 'collage' ? 'mb-4 break-inside-avoid' : 'h-full'
+      className={`bg-white/90 backdrop-blur-lg rounded-2xl shadow-xl overflow-hidden border-4 hover:shadow-2xl transition-all transform hover:scale-[1.02] group relative ${layoutType === 'collage' ? 'mb-4 break-inside-avoid' : 'h-full'
         }`}
       style={{ borderColor: `${themeColor}40` }}
     >
+      {/* Selection Button Overlay */}
+      <div className="absolute top-4 right-4 z-20">
+        {allowSelection && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect();
+            }}
+            className={`p-3 rounded-full shadow-lg transition-all transform hover:scale-110 ${isSelected ? 'bg-pink-500 text-white' : 'bg-white/80 text-gray-600 hover:bg-white opacity-0 group-hover:opacity-100'}`}
+          >
+            <svg className="w-6 h-6" fill={isSelected ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+          </button>
+        )}
+      </div>
+
       {/* Image */}
       {item.type === 'image' && (
         <img

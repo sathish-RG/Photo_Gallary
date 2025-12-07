@@ -33,9 +33,12 @@ exports.createGiftCard = async (req, res) => {
       block.mediaItems.map(item => item.mediaId)
     );
 
-    const mediaItems = await Media.find({ _id: { $in: allMediaIds } });
+    // Deduplicate IDs for validation
+    const uniqueMediaIds = [...new Set(allMediaIds)];
 
-    if (mediaItems.length !== allMediaIds.length) {
+    const mediaItems = await Media.find({ _id: { $in: uniqueMediaIds } });
+
+    if (mediaItems.length !== uniqueMediaIds.length) {
       return res.status(400).json({
         success: false,
         error: 'One or more media items not found',
@@ -153,6 +156,7 @@ exports.getGiftCardBySlug = async (req, res) => {
     // Fetch folder settings to apply watermarks
     let folderSettings = null;
     let allowDownload = false;
+    let allowClientSelection = false;
     
     // Convert to plain object first to allow modification
     const giftCardObj = giftCard.toObject();
@@ -163,9 +167,11 @@ exports.getGiftCardBySlug = async (req, res) => {
         if (folder) {
           folderSettings = {
             watermarkSettings: folder.watermarkSettings,
-            allowDownload: folder.allowDownload
+            allowDownload: folder.allowDownload,
+            allowClientSelection: folder.allowClientSelection
           };
           allowDownload = folder.allowDownload;
+          allowClientSelection = folder.allowClientSelection;
 
           // Apply watermarks to all media items in gift card
           if (giftCardObj.mediaContent && giftCardObj.mediaContent.length > 0) {
@@ -199,6 +205,7 @@ exports.getGiftCardBySlug = async (req, res) => {
       data: {
         ...giftCardObj,
         allowDownload, // Include download permission flag
+        allowClientSelection,
       },
     });
   } catch (error) {
@@ -276,6 +283,7 @@ exports.unlockGiftCard = async (req, res) => {
     // Fetch folder settings and apply watermarks
     let folderSettings = null;
     let allowDownload = false;
+    let allowClientSelection = false;
     
     // Convert to plain object first
     const giftCardObj = giftCard.toObject();
@@ -286,9 +294,11 @@ exports.unlockGiftCard = async (req, res) => {
         if (folder) {
           folderSettings = {
             watermarkSettings: folder.watermarkSettings,
-            allowDownload: folder.allowDownload
+            allowDownload: folder.allowDownload,
+            allowClientSelection: folder.allowClientSelection
           };
           allowDownload = folder.allowDownload;
+          allowClientSelection = folder.allowClientSelection;
 
           // Apply watermarks to all media items
           if (giftCardObj.mediaContent && giftCardObj.mediaContent.length > 0) {
@@ -325,6 +335,7 @@ exports.unlockGiftCard = async (req, res) => {
       data: {
         ...giftCardObj,
         allowDownload,
+        allowClientSelection,
       },
     });
 
@@ -403,9 +414,12 @@ exports.updateGiftCard = async (req, res) => {
         block.mediaItems.map(item => item.mediaId)
       );
 
-      const mediaItems = await Media.find({ _id: { $in: allMediaIds } });
+      // Deduplicate IDs for validation
+      const uniqueMediaIds = [...new Set(allMediaIds)];
 
-      if (mediaItems.length !== allMediaIds.length) {
+      const mediaItems = await Media.find({ _id: { $in: uniqueMediaIds } });
+
+      if (mediaItems.length !== uniqueMediaIds.length) {
         return res.status(400).json({
           success: false,
           error: 'One or more media items not found',

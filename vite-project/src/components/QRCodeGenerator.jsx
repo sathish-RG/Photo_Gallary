@@ -22,6 +22,20 @@ const QRCodeGenerator = ({ value, themeColor = '#ec4899' }) => {
         const imageData = ctx.getImageData(0, 0, qrCanvas.width, qrCanvas.height);
         const data = imageData.data;
 
+        // Check if canvas is empty (all white or transparent)
+        let hasBlack = false;
+        for (let i = 0; i < data.length; i += 4) {
+          if (data[i] < 128) { // Check Red channel
+            hasBlack = true;
+            break;
+          }
+        }
+
+        if (!hasBlack) {
+          // Canvas not ready yet
+          return;
+        }
+
         // Set custom canvas size
         customCanvas.width = qrCanvas.width;
         customCanvas.height = qrCanvas.height;
@@ -48,17 +62,62 @@ const QRCodeGenerator = ({ value, themeColor = '#ec4899' }) => {
         customCtx.fillStyle = '#ffffff';
         customCtx.fillRect(0, 0, customCanvas.width, customCanvas.height);
 
-        // Detect module size
-        const moduleSize = Math.floor(qrCanvas.width / 33);
+        // 1. Robustly detect module size and start offset
+        // Scan for the first black pixel (top-left of finder pattern)
+        let startX = 0;
+        let startY = 0;
+        let finderWidth = 0;
+        let found = false;
+
+        for (let y = 0; y < qrCanvas.height; y++) {
+          for (let x = 0; x < qrCanvas.width; x++) {
+            const i = (y * qrCanvas.width + x) * 4;
+            if (data[i] < 128) {
+              // Found top-left black pixel
+              startX = x;
+              startY = y;
+
+              // Measure width of this black run (finder pattern width is 7 modules)
+              let run = 0;
+              for (let k = x; k < qrCanvas.width; k++) {
+                const ki = (y * qrCanvas.width + k) * 4;
+                if (data[ki] < 128) run++;
+                else break;
+              }
+              finderWidth = run;
+              found = true;
+              break;
+            }
+          }
+          if (found) break;
+        }
+
+        // Calculate module size
+        // Finder pattern is 7 modules wide
+        const moduleSize = found ? Math.max(1, Math.round(finderWidth / 7)) : Math.floor(qrCanvas.width / 33);
+
+        // If detection failed, default to 0 offset
+        if (!found) {
+          startX = 0;
+          startY = 0;
+        }
 
         // Draw custom styled QR code
-        for (let y = 0; y < qrCanvas.height; y += moduleSize) {
-          for (let x = 0; x < qrCanvas.width; x += moduleSize) {
-            const index = (y * qrCanvas.width + x) * 4;
+        // We iterate based on the detected grid
+        for (let y = startY; y < qrCanvas.height; y += moduleSize) {
+          for (let x = startX; x < qrCanvas.width; x += moduleSize) {
+            // Sample from the CENTER of the module
+            const centerX = Math.min(x + Math.floor(moduleSize / 2), qrCanvas.width - 1);
+            const centerY = Math.min(y + Math.floor(moduleSize / 2), qrCanvas.height - 1);
+
+            const index = (centerY * qrCanvas.width + centerX) * 4;
             const isBlack = data[index] < 128;
 
             if (isBlack) {
               customCtx.fillStyle = color;
+
+              // Adjust size slightly to avoid gaps
+              const drawSize = moduleSize;
 
               if (shape === 'dots') {
                 // Circular dots
@@ -73,12 +132,12 @@ const QRCodeGenerator = ({ value, themeColor = '#ec4899' }) => {
                 customCtx.fill();
               } else if (shape === 'rounded') {
                 // Rounded squares
-                const radius = moduleSize / 4;
-                customCtx.roundRect(x, y, moduleSize, moduleSize, radius);
+                const radius = moduleSize / 3;
+                customCtx.roundRect(x, y, drawSize, drawSize, radius);
                 customCtx.fill();
               } else {
                 // Square
-                customCtx.fillRect(x, y, moduleSize, moduleSize);
+                customCtx.fillRect(x, y, drawSize, drawSize);
               }
             }
           }
@@ -92,7 +151,9 @@ const QRCodeGenerator = ({ value, themeColor = '#ec4899' }) => {
     const timers = [
       setTimeout(applyCustomStyle, 50),
       setTimeout(applyCustomStyle, 150),
-      setTimeout(applyCustomStyle, 300)
+      setTimeout(applyCustomStyle, 300),
+      setTimeout(applyCustomStyle, 500),
+      setTimeout(applyCustomStyle, 1000)
     ];
 
     return () => timers.forEach(timer => clearTimeout(timer));
