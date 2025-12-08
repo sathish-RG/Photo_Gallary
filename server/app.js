@@ -9,6 +9,7 @@ const folders = require('./routes/folderRoutes');
 const giftCards = require('./routes/giftCardRoutes');
 const admin = require('./routes/adminRoutes');
 const selectionRoutes = require('./routes/selectionRoutes');
+const portfolioRoutes = require('./routes/portfolioRoutes');
 
 const app = express();
 
@@ -35,5 +36,6 @@ app.use('/api/gift-cards', giftCards);
 app.use('/api/templates', require('./routes/templateRoutes'));
 app.use('/api/admin', admin);
 app.use('/api/selections', selectionRoutes);
+app.use('/api/portfolio', portfolioRoutes);
 
 module.exports = app;

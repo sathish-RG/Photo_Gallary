@@ -9,7 +9,8 @@ import {
   FiSearch,
   FiBell,
   FiLogOut,
-  FiX
+  FiX,
+  FiUser
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 import { clsx } from 'clsx';
@@ -23,6 +24,7 @@ const Layout = ({ children }) => {
   const navigation = [
     { name: 'Dashboard', href: '/', icon: FiHome },
     { name: 'Albums', href: '/gallery', icon: FiImage },
+    { name: 'Portfolio', href: '/portfolio/editor', icon: FiUser },
     { name: 'Gift Cards', href: '/gift-cards', icon: FiGift },
     { name: 'Settings', href: '/settings', icon: FiSettings },
   ];

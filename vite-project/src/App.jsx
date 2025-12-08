@@ -24,6 +24,8 @@ import AdminCreateTemplate from './pages/AdminCreateTemplate';
 import AdminTemplates from './pages/AdminTemplates';
 import AdminSettings from './pages/AdminSettings';
 import AdminBatchGenerator from './pages/AdminBatchGenerator';
+import PortfolioEditor from './pages/PortfolioEditor';
+import PortfolioPublicView from './pages/PortfolioPublicView';
 import NotFound from './pages/NotFound';
 import './App.css';
 
@@ -92,6 +94,25 @@ const Dashboard = () => {
                 Gift Cards
               </h3>
               <p className="text-slate-500 text-sm mt-1">Manage your gift cards</p>
+            </div>
+          </div>
+        </Link>
+
+        <Link
+          to="/portfolio/editor"
+          className="group bg-white rounded-2xl p-8 shadow-sm border border-slate-100 hover:shadow-md hover:-translate-y-1 transition-all duration-300"
+        >
+          <div className="flex items-center space-x-4">
+            <div className="h-14 w-14 bg-emerald-50 rounded-xl flex items-center justify-center group-hover:bg-emerald-100 transition-colors">
+              <svg className="h-8 w-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-slate-800 group-hover:text-emerald-600 transition-colors">
+                My Portfolio
+              </h3>
+              <p className="text-slate-500 text-sm mt-1">Build your public portfolio</p>
             </div>
           </div>
         </Link>
@@ -171,7 +192,17 @@ const AppContent = () => {
           </PrivateRoute>
         }
       />
-      {/* Public route - no authentication */}
+      {/* Portfolio routes */}
+      <Route
+        path="/portfolio/editor"
+        element={
+          <PrivateRoute>
+            <PortfolioEditor />
+          </PrivateRoute>
+        }
+      />
+      {/* Public routes - no authentication */}
+      <Route path="/p/:slug" element={<PortfolioPublicView />} />
       <Route path="/view/:slug" element={<GiftCardViewer />} />
       <Route path="/claim/:qrCodeId" element={<ClaimGift />} />
       {/* Admin routes */}
