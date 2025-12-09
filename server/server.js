@@ -8,6 +8,15 @@ dotenv.config({ path: './.env' });
 // Connect to database
 connectDB();
 
+// Start cleanup cron job for expired transfers
+// TODO: Uncomment after node-cron installation completes
+// const cleanupJob = require('./jobs/cleanupJob');
+// cleanupJob.startCleanupJob();
+
+// Start booking reminder cron job
+const bookingReminderJob = require('./jobs/bookingReminderJob');
+bookingReminderJob.startBookingReminderJob();
+
 const PORT = process.env.PORT || 5000;
 
 const server = app.listen(PORT, () => {

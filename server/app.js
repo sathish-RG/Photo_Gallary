@@ -10,6 +10,14 @@ const giftCards = require('./routes/giftCardRoutes');
 const admin = require('./routes/adminRoutes');
 const selectionRoutes = require('./routes/selectionRoutes');
 const portfolioRoutes = require('./routes/portfolioRoutes');
+const clientRoutes = require('./routes/clientRoutes');
+const invoiceRoutes = require('./routes/invoiceRoutes');
+const transferRoutes = require('./routes/transferRoutes');
+const serviceRoutes = require('./routes/serviceRoutes');
+const availabilityRoutes = require('./routes/availabilityRoutes');
+const bookingRoutes = require('./routes/bookingRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
+const scheduleEventRoutes = require('./routes/scheduleEventRoutes');
 
 const app = express();
 
@@ -37,5 +45,13 @@ app.use('/api/templates', require('./routes/templateRoutes'));
 app.use('/api/admin', admin);
 app.use('/api/selections', selectionRoutes);
 app.use('/api/portfolio', portfolioRoutes);
+app.use('/api/clients', clientRoutes);
+app.use('/api/invoices', invoiceRoutes);
+app.use('/api/transfers', transferRoutes);
+app.use('/api/services', serviceRoutes);
+app.use('/api/availability', availabilityRoutes);
+app.use('/api/bookings', bookingRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/schedule-events', scheduleEventRoutes);
 
 module.exports = app;

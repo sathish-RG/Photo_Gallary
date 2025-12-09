@@ -63,6 +63,16 @@ const folderSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  // Analytics: Track album views
+  views: {
+    type: Number,
+    default: 0,
+  },
+  // Analytics: Track total downloads from this album
+  downloads: {
+    type: Number,
+    default: 0,
+  },
   // Timestamp when folder was created
   createdAt: {
     type: Date,

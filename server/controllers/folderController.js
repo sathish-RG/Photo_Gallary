@@ -330,3 +330,145 @@ exports.updateFolderSettings = async (req, res) => {
     });
   }
 };
+
+/**
+ * @desc    Track download event for a folder
+ * @route   POST /api/folders/:id/download
+ * @access  Public
+ */
+exports.trackDownload = async (req, res) => {
+  try {
+    const folder = await Folder.findByIdAndUpdate(
+      req.params.id,
+      { $inc: { downloads: 1 } },
+      { new: true }
+    );
+
+    if (!folder) {
+      return res.status(404).json({
+        success: false,
+        error: 'Folder not found',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Download tracked',
+    });
+  } catch (error) {
+    console.error('Track download error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to track download',
+    });
+  }
+};
+
+/**
+ * @desc    Get analytics for a specific folder
+ * @route   GET /api/folders/:id/analytics
+ * @access  Private
+ */
+exports.getFolderAnalytics = async (req, res) => {
+  try {
+    const folder = await Folder.findById(req.params.id);
+
+    if (!folder) {
+      return res.status(404).json({
+        success: false,
+        error: 'Folder not found',
+      });
+    }
+
+    // Verify ownership
+    if (folder.user.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        error: 'Not authorized to view analytics for this folder',
+      });
+    }
+
+    // Get selection count for this folder
+    const SelectionList = require('../models/SelectionList');
+    const selectionCount = await SelectionList.countDocuments({ folderId: folder._id });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        folderName: folder.name,
+        views: folder.views || 0,
+        downloads: folder.downloads || 0,
+        selections: selectionCount,
+        createdAt: folder.createdAt,
+      },
+    });
+  } catch (error) {
+    console.error('Get folder analytics error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch analytics',
+    });
+  }
+};
+
+/**
+ * @desc    Get analytics summary for all user's folders
+ * @route   GET /api/folders/analytics/summary
+ * @access  Private
+ */
+exports.getAnalyticsSummary = async (req, res) => {
+  try {
+    const folders = await Folder.find({ user: req.user.id });
+
+    // Calculate totals
+    const totalViews = folders.reduce((sum, folder) => sum + (folder.views || 0), 0);
+    const totalDownloads = folders.reduce((sum, folder) => sum + (folder.downloads || 0), 0);
+
+    // Get total selections
+    const SelectionList = require('../models/SelectionList');
+    const folderIds = folders.map(f => f._id);
+    const totalSelections = await SelectionList.countDocuments({ folderId: { $in: folderIds } });
+
+    // Find most viewed folder
+    const mostViewed = folders.reduce((max, folder) => 
+      (folder.views || 0) > (max?.views || 0) ? folder : max
+    , null);
+
+    // Get folder analytics
+    const folderAnalytics = await Promise.all(folders.map(async (folder) => {
+      const selectionCount = await SelectionList.countDocuments({ folderId: folder._id });
+      return {
+        id: folder._id,
+        name: folder.name,
+        views: folder.views || 0,
+        downloads: folder.downloads || 0,
+        selections: selectionCount,
+        createdAt: folder.createdAt,
+      };
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: {
+        summary: {
+          totalFolders: folders.length,
+          totalViews,
+          totalDownloads,
+          totalSelections,
+          mostViewedFolder: mostViewed ? {
+            id: mostViewed._id,
+            name: mostViewed.name,
+            views: mostViewed.views || 0,
+          } : null,
+        },
+        folders: folderAnalytics,
+      },
+    });
+  } catch (error) {
+    console.error('Get analytics summary error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch analytics summary',
+    });
+  }
+};

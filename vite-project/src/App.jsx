@@ -24,6 +24,14 @@ import AdminCreateTemplate from './pages/AdminCreateTemplate';
 import AdminTemplates from './pages/AdminTemplates';
 import AdminSettings from './pages/AdminSettings';
 import AdminBatchGenerator from './pages/AdminBatchGenerator';
+import ClientsTab from './pages/ClientsTab';
+import BillingTab from './pages/BillingTab';
+import SendFiles from './pages/SendFiles';
+import MyTransfers from './pages/MyTransfers';
+import TransferDownload from './pages/TransferDownload';
+import Services from './pages/Services';
+import AvailabilitySettings from './pages/AvailabilitySettings';
+import BookingManagement from './pages/BookingManagement';
 import PortfolioEditor from './pages/PortfolioEditor';
 import PortfolioPublicView from './pages/PortfolioPublicView';
 import NotFound from './pages/NotFound';
@@ -201,10 +209,87 @@ const AppContent = () => {
           </PrivateRoute>
         }
       />
+      {/* Clients and Billing routes */}
+      <Route
+        path="/clients"
+        element={
+          <PrivateRoute>
+            <ClientsTab />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/billing"
+        element={
+          <PrivateRoute>
+            <BillingTab />
+          </PrivateRoute>
+        }
+      />
       {/* Public routes - no authentication */}
       <Route path="/p/:slug" element={<PortfolioPublicView />} />
       <Route path="/view/:slug" element={<GiftCardViewer />} />
       <Route path="/claim/:qrCodeId" element={<ClaimGift />} />
+      <Route path="/t/:slug" element={<TransferDownload />} />
+      {/* Transfer routes */}
+      <Route
+        path="/send-files"
+        element={
+          <PrivateRoute>
+            <SendFiles />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/transfers"
+        element={
+          <PrivateRoute>
+            <MyTransfers />
+          </PrivateRoute>
+        }
+      />
+      {/* Booking system routes */}
+      <Route
+        path="/services"
+        element={
+          <PrivateRoute>
+            <Services />
+          </PrivateRoute>
+        }
+      />
+      {/* Transfer routes */}
+      <Route
+        path="/send-files"
+        element={
+          <PrivateRoute>
+            <SendFiles />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/transfers"
+        element={
+          <PrivateRoute>
+            <MyTransfers />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/availability"
+        element={
+          <PrivateRoute>
+            <AvailabilitySettings />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/bookings"
+        element={
+          <PrivateRoute>
+            <BookingManagement />
+          </PrivateRoute>
+        }
+      />
       {/* Admin routes */}
       <Route
         path="/admin/templates"

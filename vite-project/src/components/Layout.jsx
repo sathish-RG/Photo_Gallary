@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import NotificationDropdown from './NotificationDropdown';
 import {
   FiHome,
   FiImage,
@@ -10,7 +11,13 @@ import {
   FiBell,
   FiLogOut,
   FiX,
-  FiUser
+  FiUser,
+  FiUserCheck,
+  FiFileText,
+  FiSend,
+  FiPackage,
+  FiCalendar,
+  FiClock
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 import { clsx } from 'clsx';
@@ -24,6 +31,12 @@ const Layout = ({ children }) => {
   const navigation = [
     { name: 'Dashboard', href: '/', icon: FiHome },
     { name: 'Albums', href: '/gallery', icon: FiImage },
+    { name: 'Clients', href: '/clients', icon: FiUserCheck },
+    { name: 'Billing', href: '/billing', icon: FiFileText },
+    { name: 'Services', href: '/services', icon: FiPackage },
+    { name: 'Availability', href: '/availability', icon: FiCalendar },
+    { name: 'Bookings', href: '/bookings', icon: FiClock },
+    { name: 'Send Files', href: '/send-files', icon: FiSend },
     { name: 'Portfolio', href: '/portfolio/editor', icon: FiUser },
     { name: 'Gift Cards', href: '/gift-cards', icon: FiGift },
     { name: 'Settings', href: '/settings', icon: FiSettings },
@@ -176,7 +189,7 @@ const Layout = ({ children }) => {
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="hidden md:flex items-center bg-slate-50 rounded-xl px-4 py-2 w-64 border border-slate-100 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all">
+            <div className="hidden md:flex items-center bg-slate-50 rounded-xl px-4 py-2 w-64 border border-slate-100">
               <FiSearch className="text-text-secondary mr-2" />
               <input
                 type="text"
@@ -185,10 +198,8 @@ const Layout = ({ children }) => {
               />
             </div>
 
-            <button className="p-2 text-text-secondary hover:text-primary transition-colors relative">
-              <FiBell size={20} />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-            </button>
+            {/* Notifications */}
+            <NotificationDropdown />
 
             <div className="flex items-center gap-3 pl-4 border-l border-slate-100">
               <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-sm">
